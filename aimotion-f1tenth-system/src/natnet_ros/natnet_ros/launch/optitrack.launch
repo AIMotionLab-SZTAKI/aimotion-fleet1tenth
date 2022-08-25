@@ -1,0 +1,13 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="server" default="192.168.1.141" /> <!-- Server IP adress -->
+
+  <!-- If car_id ros parameter is declared in the namespace only streams the position of the named RigidBody -->
+  <!-- Fake data streaming is disabled -->
+  
+ 
+ <node pkg="natnet_ros" type="client.py" name="aimotion_mocap_node" output="screen">
+   <param name="server" value="$(arg server)" />
+ </node>
+</launch>

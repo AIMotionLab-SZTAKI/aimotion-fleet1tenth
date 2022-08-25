@@ -1,0 +1,13 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="duty_max" default="0.1" />
+  <arg name="delta_max" default="0.6" />
+
+  <!-- Lauch keyboard control node -->
+  <node name="keyboard_controller" pkg="keyboard_operator" type="keyboard.py" output="screen">
+     <param name="duty_max" value="$(arg duty_max)" />
+     <param name="delta_max" value="$(arg delta_max)" />
+     <param name="freq" value="100" />
+  </node>
+</launch>

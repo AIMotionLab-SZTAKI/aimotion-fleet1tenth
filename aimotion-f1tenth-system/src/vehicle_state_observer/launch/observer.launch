@@ -1,0 +1,13 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults TODO -->
+  <arg name="tracker_offset" default="0.06" />
+  <arg name="sampling_freq" default="20.0" />
+  
+
+  <!-- Lauch observer node -->
+  <node name="state_observer" pkg="vehicle_state_observer" type="optitrack_state_observer_node.py" output="screen"> <!-- mocap_state_observer.py-->
+     <param name="frequency" value="$(arg sampling_freq)" />
+     <param name="tracker_offset" value="$(arg tracker_offset)" />
+  </node>
+</launch>

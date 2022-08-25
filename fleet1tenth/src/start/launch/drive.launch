@@ -1,0 +1,15 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="car_id" default="RC_car_01" />
+  <arg name="duty_max" default="0.05" />
+  <arg name="delta_max" default="0.6" />
+
+  <param name="car_id" value="$(arg car_id)" />
+
+  <!-- Inlcude keyboard launch -->
+  <include file="$(find keyboard_operator)/launch/teleop.launch">
+     <arg name="duty_max" value="$(arg duty_max)" />
+     <arg name="delta_max" value="$(arg delta_max)" />
+  </include>
+</launch>

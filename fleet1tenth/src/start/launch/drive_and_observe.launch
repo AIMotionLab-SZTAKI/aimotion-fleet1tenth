@@ -1,0 +1,27 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="car_id" default="RC_car_01" />
+  <arg name="duty_max" default="0.05" />
+  <arg name="delta_max" default="0.6" />
+  <arg name="position_level" default="true" />
+  <arg name="velocity_level" default="true" />
+  <arg name="inputs" default="true" />
+  <arg name="filename" default="logged_data" />
+
+
+  <param name="car_id" value="$(arg car_id)" />
+
+  <!-- Inlcude keyboard launch -->
+  <include file="$(find keyboard_operator)/launch/teleop.launch">
+     <arg name="duty_max" value="$(arg duty_max)" />
+     <arg name="delta_max" value="$(arg delta_max)" />
+  </include>
+
+  <include file="$(find vehicle_state_logger)/launch/log.launch">
+    <arg name="position_level" value="$(arg position_level)" />
+    <arg name="velocity_level" value="$(arg velocity_level)" />
+    <arg name="inputs" value="$(arg inputs)" />
+    <arg name="filename" value="$(arg filename)" />
+  </include>
+</launch>

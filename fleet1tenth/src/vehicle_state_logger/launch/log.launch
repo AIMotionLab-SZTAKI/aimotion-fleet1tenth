@@ -1,0 +1,17 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="position_level" default="true" />
+  <arg name="velocity_level" default="true" />
+  <arg name="inputs" default="true" />
+  <arg name="filename" default="logged_data" />
+
+
+  <!-- Launch state logger node -->
+  <node name="state_logger_node" pkg="vehicle_state_logger" type="state_logger_node.py" output="screen">
+    <param name="position_level" value="$(arg position_level)" />
+    <param name="velocity_level" value="$(arg velocity_level)" />
+    <param name="inputs" value="$(arg inputs)" />
+    <param name="filename" value="$(arg filename)" />
+  </node>
+</launch>

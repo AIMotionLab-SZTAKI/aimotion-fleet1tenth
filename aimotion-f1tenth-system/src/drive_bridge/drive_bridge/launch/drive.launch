@@ -1,0 +1,10 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  
+  <!-- Load params -->
+  <rosparam command="load" file="$(find drive_bridge)/config/params.yaml" />
+
+  <!-- Lauch bridge and actuator nodes -->
+  <node name="drive_bridge" pkg="drive_bridge" type="drive_bridge_node.py" output="screen" />
+  <node name="vesc_driver_node" pkg="vesc_driver" type="vesc_driver_node" output="screen" />
+</launch>

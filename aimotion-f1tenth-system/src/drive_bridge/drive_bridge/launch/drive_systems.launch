@@ -1,0 +1,39 @@
+<!-- -*- mode: XML -*- -->
+<launch>  
+
+  <!-- Arguments -->
+  <arg name="optitrack_ip" default="192.168.1.141" />
+  <arg name="update_frequency" default="20.0" />
+  <arg name="angle_gain" default="1" />
+  <arg name="angle_offset" default="0.5" />
+  <arg name="tracker_offset" default="0.06" />
+  <arg name="car_id" default="RC_car_01" />
+
+
+  <group ns="$(arg car_id)">
+
+  <!-- Lauch bridge -->
+  <node name="drive_bridge" pkg="drive_bridge" type="drive_bridge_node.py" output="screen">
+  	<param name="angle_gain" value="$(arg angle_gain)" />
+      	<param name="angle_offset" value="$(arg angle_offset)" />
+  </node>
+
+  <!-- Launch VESC hardware interface -->
+  <node name="vesc_driver_node" pkg="vesc_driver" type="vesc_driver_node" output="screen">
+  	<param name="port" value="/dev/sensors/vesc"/>
+  </node>
+  
+  <!-- Launch Natet ROS interface node -->
+  <include file="$(find natnet_ros)/launch/optitrack.launch">
+      <arg name="server" value="$(arg optitrack_ip)" />
+      <arg name="car_id" value="$(arg car_id)" />
+  </include>
+
+
+  <!-- Launch State observer node -->
+  <include file="$(find vehicle_state_observer)/launch/observer.launch">
+  	<arg name="tracker_offset" value="$(arg tracker_offset)" />
+  	<arg name="sampling_freq" value="$(arg update_frequency)" />
+  </include>
+  </group>
+</launch>

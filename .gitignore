@@ -1,0 +1,6 @@
+devel
+build
+__pycache__
+*.pyc
+configuration.yaml
+env.sh

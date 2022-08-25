@@ -1,0 +1,10 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="sampling_freq" default="100" />
+  
+  <!-- Launch VRPN nodes -->
+  <include file="$(find vrpn_client_ros)/launch/sample.launch">
+    <arg name="sampling_freq" value="$(arg sampling_freq)" />
+  </include>
+</launch>

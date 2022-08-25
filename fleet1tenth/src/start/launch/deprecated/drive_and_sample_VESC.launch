@@ -1,0 +1,33 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Arg defaults -->
+  <arg name="car_id" default="RC_car_01" />
+  <arg name="duty_max" default="0.05" />
+  <arg name="delta_max" default="0.6" />
+  <arg name="fname" default="logged_data" />
+  
+  <param name="car_id" value="$(arg car_id)" />
+
+  <!-- Inlcude keyboard launch -->
+  <include file="$(find keyboard_operator)/launch/teleop.launch">
+     <arg name="duty_max" value="$(arg duty_max)" />
+     <arg name="delta_max" value="$(arg delta_max)" />
+  </include>
+  
+  <!-- Launch VRPN nodes -->
+  <include file="$(find vrpn_client_ros)/launch/sample.launch">
+    <arg name="sampling_freq" value="50.0" />
+  </include>
+
+  <!-- Launch syncronizer and logger -->
+  <include file="$(find track_logger)/launch/optitrack_logger.launch">
+    <arg name="sampling_freq" value="50.0" />
+    <arg name="filename" value="$(arg fname)" />
+    <arg name="save_to_file" value="true" />
+  </include>
+  
+  <!-- Launch VESC speed logger -->
+  <include file="$(find track_logger)/launch/vesc_logger.launch">
+    <arg name="filename" value="$(arg fname)" />
+  </include>
+</launch>
