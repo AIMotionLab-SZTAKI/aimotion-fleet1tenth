@@ -7,6 +7,8 @@ class FileTransporterSFTPClient(paramiko.SFTPClient):
     """
     def put_dir(self, source, target):
         for item in os.listdir(source):
+            if item in ["devel", "build"]:
+                continue
             if os.path.isfile(os.path.join(source, item)):
                 self.put(os.path.join(source, item), '%s/%s' % (target, item))
             else:

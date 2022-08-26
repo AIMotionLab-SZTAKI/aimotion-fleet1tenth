@@ -61,7 +61,7 @@ class VehicleChooserDialog(QDialog):
 class VehicleController(QDialog):
     # desine control signal to emit
     control=pyqtSignal(tuple) #(car_ID, d, delta) TODO check order to minimc the rest
-    def __init__(self, car_IDs):
+    def __init__(self, car_IDs, FREQUENCY):
         """
         GUI app for the teleoperation of the vehicle
         """
@@ -84,7 +84,7 @@ class VehicleController(QDialog):
         self.timer = QTimer()
         self.timer.setTimerType(Qt.PreciseTimer)
         self.timer.timeout.connect(self.emitControl)
-        self.timer.start(10) # Start with 10 [ms]
+        self.timer.start(1000/FREQUENCY) # Start timer with the specified frequency
 
         
         # Duty cycle control
