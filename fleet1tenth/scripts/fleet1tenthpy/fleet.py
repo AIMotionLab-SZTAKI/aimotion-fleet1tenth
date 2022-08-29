@@ -9,6 +9,7 @@ from roslaunch.core import RLException
 from pathlib import Path
 import time
 from .gui import GUIManager, VehicleChooserDialog, VehicleController
+from .logging import StateLogger
 from .install_utils import create_clients, create_environment
 # import pygame
 
@@ -160,6 +161,36 @@ class Car:
 
 
 
+    def init_logger(self, path, gui=False):
+        """
+        Initializes the state logger for the vehicle
+        """
+        self.logger=StateLogger(self.ID, path, gui)
+
+
+    def start_logging(self):
+        """
+        Starts logging the states to the file specified in the init_logger() function
+        """
+        try:
+            self.logger.start_logging()
+        except AttributeError:
+            print("State logger must be initialized before calling the start_logging/stop_logging functions!")
+    
+
+
+    def stop_logging(self):
+        """Stops the state logger"""
+        try:
+            self.logger.stop_logging()
+        except:
+            print("State logger must be initialized before calling the start_logging/stop_logging functions!")
+
+
+
+
+
+
 class Fleet:
     def __init__(self, config_file):
         """
@@ -170,8 +201,7 @@ class Fleet:
                             configuration data needed for the setup
         
         """
-        
-        # read config file
+
         try:
             with open(config_file, "r") as f:
                 try:
@@ -201,7 +231,7 @@ class Fleet:
         self.cars=[]
 
         # init GUI manager
-        self.GUI=GUIManager()
+        self.GUIManager=GUIManager()
 
         # initialize ROS node
         try:
@@ -327,7 +357,10 @@ class Fleet:
         controller.control.connect(self.control_car)
 
         # execute controller
-        controller.exec_()
+        controller.show()
+
+        self.GUIManager.app.exec()
+
         controller.deleteLater()
 
 

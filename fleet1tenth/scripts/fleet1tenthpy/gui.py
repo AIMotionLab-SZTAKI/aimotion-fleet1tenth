@@ -216,6 +216,136 @@ class VehicleController(QDialog):
 
 
 
+    def loop(self):
+        """
+        Creates an infinite loop while the controller is running
+        """
+        while self.timer.isActive():
+            pass
+
+
+
+class LoggerDialog(QDialog):
+    start_logging=pyqtSignal(bool)
+    stop_logging=pyqtSignal(bool)
+
+    def __init__(self, car_ID):
+        """
+        GUI app for displaying logged vehicle state data
+        """
+        super(LoggerDialog, self).__init__()
+        self.setWindowTitle("fleet1tenth - State logger")
+
+        idLBL=QLabel(car_ID)
+
+        # create labels + lineedits
+        self.tLNE=QLineEdit()
+        self.tLNE.setReadOnly(True)
+        self.xLNE=QLineEdit()
+        self.xLNE.setReadOnly(True)
+        self.yLNE=QLineEdit()
+        self.yLNE.setReadOnly(True)
+        self.phiLNE=QLineEdit()
+        self.phiLNE.setReadOnly(True)
+        self.v_xiLNE=QLineEdit()
+        self.v_xiLNE.setReadOnly(True)
+        self.v_etaLNE=QLineEdit()
+        self.v_etaLNE.setReadOnly(True)
+        self.omegaLNE=QLineEdit()
+        self.omegaLNE.setReadOnly(True)
+
+        self.erpmLNE=QLineEdit()
+
+        self.dLNE=QLineEdit()
+        self.deltaLNE=QLineEdit()
+
+        tLBL=QLabel("Time [s]")
+        xLBL=QLabel("x-Position [m]")
+        yLBL=QLabel("y-Position [m]")
+        phiLBL=QLabel("Heading angle [rad]")
+        v_xiLBL=QLabel("Longitudinal velocity [m/s]")
+        v_etaLBL=QLabel("Lateral velocity [m/s]")
+        omegaLBL=QLabel("Angular velocity [rad/s]")
+
+        erpmLBL=QLabel("ERPM [rpm]")
+
+        dLBL=QLabel("Motor reference [1]")
+        deltaLBL=QLabel("Steering input [1]") # the input value sent to the steering servo not the steering angle in [rad]
+
+        self.startBTN=QPushButton("Start Logging")
+        self.startBTN.clicked.connect(self.emit_start_logging)
+        self.stopBTN=QPushButton("Stop logging")
+        self.stopBTN.clicked.connect(self.emit_stop_logging)
+
+        # organize into layouts
+        labelLayout=QVBoxLayout()
+        labelLayout.addWidget(tLBL)
+        labelLayout.addWidget(xLBL)
+        labelLayout.addWidget(yLBL)
+        labelLayout.addWidget(phiLBL)
+        labelLayout.addWidget(v_xiLBL)
+        labelLayout.addWidget(v_etaLBL)
+        labelLayout.addWidget(omegaLBL)
+        labelLayout.addWidget(erpmLBL)
+        labelLayout.addWidget(dLBL)
+        labelLayout.addWidget(deltaLBL)
+        
+        lineeditLayout=QVBoxLayout()
+        lineeditLayout.addWidget(self.tLNE)
+        lineeditLayout.addWidget(self.xLNE)
+        lineeditLayout.addWidget(self.yLNE)
+        lineeditLayout.addWidget(self.phiLNE)
+        lineeditLayout.addWidget(self.v_xiLNE)
+        lineeditLayout.addWidget(self.v_etaLNE)
+        lineeditLayout.addWidget(self.omegaLNE)
+        lineeditLayout.addWidget(self.erpmLNE)
+        lineeditLayout.addWidget(self.dLNE)
+        lineeditLayout.addWidget(self.deltaLNE)
+        
+        dataLayout=QHBoxLayout()
+        dataLayout.addLayout(labelLayout)
+        dataLayout.addLayout(lineeditLayout)
+
+        buttonLayout=QHBoxLayout()
+        buttonLayout.addWidget(self.startBTN)
+        buttonLayout.addWidget(self.stopBTN)
+
+        Layout=QVBoxLayout()
+        Layout.addWidget(idLBL)
+        Layout.addLayout(dataLayout)
+        Layout.addLayout(buttonLayout)
+        
+        self.setLayout(Layout)
+        self.show()
+
+    def updateValues(self, time,x,y,heading_angle,ERPM,v_xi,v_eta,omega,d,delta):
+        """
+        Update the displayed state values
+        """
+        self.tLNE.setText(f"{time:.3f}")
+        self.xLNE.setText(f"{x:.3f}")
+        self.yLNE.setText(f"{y:.3f}")
+        self.phiLNE.setText(f"{heading_angle:.3f}")
+        self.erpmLNE.setText(f"{ERPM:.1f}")
+        self.v_xiLNE.setText(f"{v_xi:.3f}")
+        self.v_etaLNE.setText(f"{v_eta:.3f}")
+        self.omegaLNE.setText(f"{omega:.3f}")
+        self.dLNE.setText(f"{d:.3f}")
+        self.deltaLNE.setText(f"{delta:.3f}")
+
+
+    def emit_start_logging(self):
+        self.start_logging.emit(True)
+        self.startBTN.setEnabled(False)
+        self.stopBTN.setEnabled(True)
+
+    def emit_stop_logging(self):
+        self.stop_logging.emit(True)
+        self.startBTN.setEnabled(True)
+        self.stopBTN.setEnabled(False)
+
+
+    
 
 
     

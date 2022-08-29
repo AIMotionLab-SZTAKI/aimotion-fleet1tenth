@@ -1,2 +1,2 @@
-from .fleet1tenth import Fleet
-from .fleet1tenth import Car
+from .fleet import Fleet
+from .fleet import Car
