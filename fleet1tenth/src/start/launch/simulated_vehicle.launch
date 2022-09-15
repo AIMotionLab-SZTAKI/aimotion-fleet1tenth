@@ -1,0 +1,13 @@
+<!-- -*- mode: XML -*- -->
+<launch>  
+  <!-- Environment variables -->
+  <!-- Arguments -->
+  <arg name="car_id" default="AI_car_00" />
+
+  <!-- Launch car nodes locally for simulation -->
+  <group ns="$(arg car_id)">
+  <node name="control_node" pkg="control" type="control_node.py" output="screen"/>
+  </group>
+</launch>
+
+

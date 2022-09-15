@@ -1,37 +1,50 @@
 ---
-# list of vehicles in the fleet
-fleet: ["RC_car_01", "RC_car_02", RC_car_03]
+# ROS network configuration data
+ROS_MASTER_URI: http://192.168.1.77:11311
+ROS_IP: 192.168.1.13
+
 
 # ODE solver
-solver: "RK45" # ODE solver
+SOLVER: "RK45" # ODE solver
+
+# system frequency
+FREQUENCY: 25.0
 
 # dynamic singel track vehicle model parameters
-vehicle_models:
-  default_model: # default model of the simulator.
+vehicles:
+  AI_car_01:
+    init_pose: [0,0,0]
+    # Specify custom model parameters here!
+    # If no custom paramters are provided the default_vehicle_model will be used!
+    #m:
+    #l_f:
+    #l_r:
+    #I_z:
+    #C_m1:
+    #C_m2:
+    #C_m3:
+    #C_f:
+    #C_r:
+    
+  AI_car_02:
+    init_pose: [1,1,0]
   
-    # physical parameters
-    m: 2.923 # [kg]
-    l_f: 0.163 # [m]
-    l_r: 0.168 # [m]
-    I_z: 0.0796 # [kg m^2]
-  
-    # drivetrain parameters
-    C_m1: 41.7960 # [N]
-    C_m2: 2.0152 # [Ns/m]
-    C_m3: 0.4328 # [N]
+  AI_car_03:
+    init_pose: [-1,-1,0]
 
-    # tire parameters
-    C_f: 41.7372 # [N/rad]
-    C_r: 29.4662 # [N/rad]
-  
-  # Create custom models here for each vehicle to override the default model
-  #car_ID:
-  #  m:
-  #  l_f:
-  #  l_r:
-  #  I_z:
-  #  C_m1:
-  #  C_m2:
-  #  C_m3:
-  #  C_f:
-  #  C_r:
+
+default_vehicle_model: # default model of the simulator
+  # physical parameters
+  m: 2.923 # [kg]
+  l_f: 0.163 # [m]
+  l_r: 0.168 # [m]
+  I_z: 0.0796 # [kg m^2]
+
+  # drivetrain parameters
+  C_m1: 41.7960 # [N]
+  C_m2: 2.0152 # [Ns/m]
+  C_m3: 0.4328 # [N]
+
+  # tire parameters
+  C_f: 41.7372 # [N/rad]
+  C_r: 29.4662 # [N/rad]

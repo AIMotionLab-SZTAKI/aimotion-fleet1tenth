@@ -116,7 +116,3 @@ class StateLogger:
         self.sub=rospy.Subscriber("/"+self.car_ID+"/state",VehicleStateStamped, self.log_data)
 
         print(f"\n###############################\nStarted state logger for {self.car_ID}...\n###############################\n")
-        
-
-
-

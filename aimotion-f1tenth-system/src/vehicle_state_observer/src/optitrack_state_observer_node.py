@@ -196,7 +196,7 @@ class Estimator:
         msg.heading_angle=fi
 
         msg.velocity_x=self.vx_filt #velocity level data
-        msg.velocity_y=self.vy_filt
+        msg.velocity_y=-self.vy_filt # negate because of OptiTrack-model transition
         msg.heading_angle=fi
         msg.omega=self.omega_filt
 

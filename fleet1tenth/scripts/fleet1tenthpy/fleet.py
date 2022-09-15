@@ -11,11 +11,9 @@ import time
 from .gui import GUIManager, VehicleChooserDialog, VehicleController
 from .logging import StateLogger
 from .install_utils import create_clients, create_environment
-# import pygame
 
 
 class Car:
-
     def __init__(self,ID, PARAMS_DICT):
         """
         Class interface for the communication and control of one F1/10 vehicle
@@ -88,7 +86,7 @@ class Car:
         print(f"Successfully installed aimotion-f1tenth-system on vehicle {self.ID}")
 
 
-    def launch_system(self, OPTITRACK_SERVER_IP, FREQUENCY):
+    def launch_system(self, FREQUENCY, OPTITRACK_SERVER_IP):
         """
         Launches communication, control and driver nodes onboard the F1/10 vehicle
         
@@ -219,7 +217,7 @@ class Fleet:
         environ["ROS_IP"]=config_data["ROS_IP"]
         
         # OptiTrack configuration
-        self.OPTITRACK_SERVER_IP=config_data["OPTITRACK_SERVER_IP"]
+        self.OPTITRACK_SERVER_IP=config_data["OPTITRACK_SERVER_IP"] 
 
         # System frequency for the controllers, state observers...
         self.FREQUENCY=config_data["FREQUENCY"]
@@ -257,16 +255,30 @@ class Fleet:
             return []
 
     
-    def init_cars(self):
+    def init_cars(self, IDs=None):
         """
         Launches a chooser application to select vehicle's to use the initializes the control interface for them
         """
         self.drop_cars()
-        chosen=self.choose_cars()
-        for id in chosen:
-            c=Car(id, self.vehicle_data[id])
+        
+        # no ID is specified opens a dialog
+        if IDs is None:
+            chosen=self.choose_cars()
+        
+        # one car ID provided
+        if isinstance(IDs, str):
+            c=Car(IDs, self.vehicle_data[IDs])
             print(f"Vehicle control interface initialized for {c.ID}")
             self.cars.append(c)
+
+        # multiple IDs provided 
+        elif isinstance(IDs, list):
+            for id in chosen:
+                c=Car(id, self.vehicle_data[id])
+                print(f"Vehicle control interface initialized for {c.ID}")
+                self.cars.append(c)
+        else:
+            raise ValueError("Unexpected argument... IDs must be list or str!")
 
 
     def drop_cars(self):
@@ -296,7 +308,7 @@ class Fleet:
         if IDs is None: # start all cars
             for car in self.cars:
                 try:
-                    car.launch_system(self.OPTITRACK_SERVER_IP, self.FREQUENCY)
+                    car.launch_system(FREQUENCY=self.FREQUENCY, OPTITRACK_SERVER_IP=self.OPTITRACK_SERVER_IP)
                     car.check_steering()
                 except Exception:
                     print(f"Unable establish connection to {car.ID}, deleting interface...")
@@ -307,7 +319,7 @@ class Fleet:
             for car in self.cars:
                 if car.ID in IDs:
                     try:
-                        car.launch_system(self.OPTITRACK_SERVER_IP, self.FREQUENCY)
+                        car.launch_system(FREQUENCY=self.FREQUENCY, OPTITRACK_SERVER_IP=self.OPTITRACK_SERVER_IP)
                         car.check_steering()
                     except Exception:
                         print(f"Unable establish connection to {car.ID}, deleting interface...")
@@ -393,6 +405,23 @@ class Fleet:
         if car is None:
             raise Exception(f"No control interface for {ID}")
         return car
+
+
+class FleetTimer:
+    def __init__(self, FREQUENCY):
+        self.FREQUENCY=FREQUENCY
+
+    def start(self):
+        self.t0=rospy.Time.now()
+
+    def time(self):
+        return (rospy.Time.now-self.t0).to
+
+    def sleep(self,duration):
+        rospy.sleep(duration)
+
+
+
 
         
 

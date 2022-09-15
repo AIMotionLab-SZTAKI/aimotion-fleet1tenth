@@ -1,0 +1,15 @@
+<!-- -*- mode: XML -*- -->
+<!-- Launch file of the simulator node that is responsible for vehicle dynamics simulation in simulaton node -->
+<launch>  
+  <!-- Arguments -->
+  <arg name="simulation_yaml_path" default="$(find start)/../../scripts/config/simulation.yaml"/>
+  <arg name="launched_vehicles" default="None" />
+
+  <!-- Launch the simulator nodes -->
+  <group ns="SIMULATOR">
+  <node name="simulator_node" pkg="simulator" type="simulator_node.py" output="screen">
+    <rosparam command="load" file="$(arg simulation_yaml_path)" />
+    <param name="launched_vehicles" value="$(arg launched_vehicles)" />
+  </node>
+  </group>
+</launch>
