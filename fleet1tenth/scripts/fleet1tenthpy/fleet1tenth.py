@@ -20,6 +20,8 @@ class Fleet1tenth:
             from . import Fleet
             self.fleet=Fleet(config_file_path)
 
+        print(f"\n###############################\n    AIMotionLab-FLEET1TENTH    \n###############################\n")
+
 
 
         
