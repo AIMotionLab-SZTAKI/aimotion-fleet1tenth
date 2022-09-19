@@ -3,7 +3,7 @@
 
 # Currently developed in Python2.7
 
-from control.scripts.controller import Controller
+from control.scripts.controllers import Controller
 import rospy
 
 if __name__=="__main__":
