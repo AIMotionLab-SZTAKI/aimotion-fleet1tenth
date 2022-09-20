@@ -2,10 +2,12 @@
 
 # Developed in Python 2.7
 
+from winreg import KEY_WOW64_32KEY
 import numpy as np
 from .control_utils import BaseController, project_to_closest, _normalize, _clamp
 from vehicle_state_msgs.msg import VehicleStateStamped
 from drive_bridge_msg.msg import InputValues
+import math
 
 class FeedBackController(BaseController):
     def __init__(self, FREQUENCY, projection_window, projection_step):
@@ -97,11 +99,20 @@ class FeedBackController(BaseController):
 
         
     def get_lateral_feedback_gains(self, v_xi):
-        return 1,1,1,1
+        if v_xi>0:
+            k1=0.0015*v_xi**3-0.0181*v_xi**2+0.0838*v_xi-0.7028
+            k2=0.0077*v_xi**3-0.0947*v_xi**2+0.4089*v_xi+0.0219
+            k3=-0.0213*v_xi**3+0.2408*v_xi**2-0.1987*v_xi+9.1302
+            k4=0.0031*v_xi**3-0.0181*v_xi**2+0.3820*v_xi+0.0103
+            return k1,k2,k3,k4
+        else:
+            return 0,0,0,0 
 
 
     def get_longitudinal_feedback_gains(self,p):
-        return 1,1
+        k1=np.sign(p)*0.533-0.099*p
+        k2=0.4856+0.0129*abs(p)
+        return k1, k2
 
 
 
