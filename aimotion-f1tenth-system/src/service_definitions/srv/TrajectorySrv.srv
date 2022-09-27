@@ -1,7 +1,0 @@
-# spline knots
-float t[]
-float c[]
-float k[]
----
-#return value
-bool success

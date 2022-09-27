@@ -6,21 +6,22 @@ class Fleet1tenth:
     def __init__(self,config_file_path=None, parser_=[],args=None):
         # build parser for command line arguments
         parser=argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                        parents=[parser_])
+                                        parents=parser_)
 
         parser.add_argument("--sim", help="Run scripts in simulation.", action="store_true")
         if isinstance(args, str):
             args = args.split()
         args, _ = parser.parse_known_args(args)
 
+        print(f"\n###############################\n    AIMotionLab-FLEET1TENTH    \n###############################\n")
+
         if args.sim:
             from .simulation import Fleet
             self.fleet=Fleet(config_file_path)
+            print("    Simulation environment    \n")
         else:
             from . import Fleet
             self.fleet=Fleet(config_file_path)
-
-        print(f"\n###############################\n    AIMotionLab-FLEET1TENTH    \n###############################\n")
 
 
 

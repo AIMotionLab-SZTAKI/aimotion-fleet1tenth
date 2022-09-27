@@ -3,11 +3,13 @@
   <!-- Environment variables -->
   <!-- Arguments -->
   <arg name="car_id" default="AI_car_00" />
+  <arg name="frequency" default="25.0" />
 
   <!-- Launch car nodes locally for simulation -->
   <group ns="$(arg car_id)">
-  <node name="control_node" pkg="control" type="control_node.py" output="screen"/>
+    <node name="control_node" pkg="control" type="control_node.py" output="screen">
+      <param name="car_ID" value="$(arg car_id)" />
+      <param name="FREQUENCY" value="$(arg frequency)" />
+    </node>
   </group>
 </launch>
-
-

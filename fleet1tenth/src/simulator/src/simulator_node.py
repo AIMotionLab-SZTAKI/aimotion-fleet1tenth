@@ -7,6 +7,32 @@ import time
 from scipy.integrate import odeint, solve_ivp
 from drive_bridge_msg.msg import InputValues
 from vehicle_state_msgs.msg import VehicleStateStamped
+import matplotlib.pyplot as plt
+from os.path import expanduser
+
+def RungeKutta4_step(t, h, y_n, model, inputs):
+    """Executes 1 step of the Runge-Kutta method with input params kept as a constant"""
+    k1 = model(t, y_n, inputs)
+    k2 = model(t + h / 2, y_n + h * k1 / 2, inputs)
+    k3 = model(t + h / 2, y_n + h * k2 / 2, inputs)
+    k4 = model(t + h, y_n + h * k3, inputs)
+    y_n1 = y_n + 1 / 6 * h * (k1 + 2 * k2 + 2 * k3 + k4)
+    t_n1 = t + h
+    return t_n1, y_n1
+
+def _normalize(angle):
+    """
+    Normalizes the given angle into the [-pi/2, pi/2] range
+
+    Arguments:
+        - angle(float): The angle to normalize, in radian
+    """
+    while angle > np.pi:
+        angle -= 2*np.pi
+    while angle < -np.pi:
+        angle += 2*np.pi
+
+    return angle
 
 
 class SimulatedCar:
@@ -19,6 +45,7 @@ class SimulatedCar:
             - model_data(dict): Parameters of the simualted dynamic single track model
             - initial_pose(list): [x,y,phi] Initial position and orientation of the vehicle
         """
+
 
         # identification
         self.ID=ID
@@ -72,8 +99,10 @@ class SimulatedCar:
         self.v_xi=[0]
         self.v_eta=[0]
         self.omega=[0]
+        self.t=[0]
 
-    def step(self, inputs, dt, method="RK45"):
+
+    def step(self, inputs,t, dt, method="RK45"):
         """
         Steps the simulation with the specified time step
 
@@ -89,16 +118,40 @@ class SimulatedCar:
                 - "BDF": Implicit multi-step variable-order (1 to 5) method based on a backward differentiation formula for the derivative approximation.
                 - "LSODA": Adams/BDF method with automatic stiffness detection and switching. This is a wrapper of the Fortran solver from ODEPACK.
         """
+        inputs=list(inputs)
+        if inputs[0]>0.5:
+            inputs[0]=0.5
+        elif inputs[0]<-0.1:
+            inputs[0]=0
+        
+        if inputs[1]>0.5:
+            inputs[1]=0.5
+        elif inputs[0]<-0.5:
+            inputs[0]=-0.5
+        
         self.d.append(inputs[0])
         self.delta.append(inputs[1])
-        sol=solve_ivp(fun=self.dynamics, t_span=(0, dt), y0=self.get_current_states(),t_eval=np.linspace(0, dt, 10), method=method)
-        states=sol.y
-        self.x.append(states[0][9])
-        self.y.append(states[1][9])
-        self.phi.append(states[2][9])
-        self.v_xi.append(states[3][9])
-        self.v_eta.append(states[4][9])
-        self.omega.append(states[5][9])
+
+        #sol=solve_ivp(fun=self.dynamics, t_span=(0, dt), y0=self.get_current_states(),t_eval=np.linspace(0, dt, 10), method=method)
+        #states=sol.y
+        #self.x.append(states[0][9])
+        #self.y.append(states[1][9])
+        #self.phi.append(_normalize(states[2][9]))
+        #self.v_xi.append(states[3][9])
+        #self.v_eta.append(states[4][9])
+        #self.omega.append(states[5][9])
+
+        states=RungeKutta4_step(0,dt,self.get_current_states(),self.dynamics, inputs)
+        self.x.append(states[1][0])
+        self.y.append(states[1][1])
+        self.phi.append(_normalize(states[1][2]))
+        self.v_xi.append(states[1][3])
+        self.v_eta.append(states[1][4])
+        self.omega.append(states[1][5])
+
+        self.t.append(t)
+        #time.sleep(1)
+        
         
         
         
@@ -109,7 +162,7 @@ class SimulatedCar:
         return np.array([self.x[-1],self.y[-1],self.phi[-1],self.v_xi[-1],self.v_eta[-1],self.omega[-1]])
 
 
-    def dynamics(self, t, states):
+    def dynamics(self, t, states, inputs):
         """
         Function that describes the model dynamics
 
@@ -128,8 +181,6 @@ class SimulatedCar:
             alpha_r=(omega*self.l_r-v_eta)/v_xi
             F_f_eta=self.C_f*alpha_f
             F_r_eta=self.C_r*alpha_r
-            print(alpha_f)
-            print(alpha_r)
         else:
             F_f_eta=0
             F_r_eta=0
@@ -164,6 +215,9 @@ class SimulatedCar:
 
         # publish
         self.pub.publish(msg)
+    
+    def plot_traj(self):
+        plt.plot(self.x, self.y)
 
 
 
@@ -175,7 +229,6 @@ class Simulator:
 
         self.started=False # remains False until the simulator recieves control input
         self.timer=0
-        self.input_timer=0
 
         self.cars=[]
         self.subs=[]
@@ -232,7 +285,6 @@ class Simulator:
     
     def _input_callbacks(self,data, ID):
         """Handles the control inputs sent from the controller"""
-        print(self.input_matrix)
         if not self.started:
             self.started=True # disable initial pose publishing
 
@@ -242,7 +294,9 @@ class Simulator:
             # step the simulation for the valid inputs
             for key, value in self.input_matrix.items():
                 c=next((c for c in self.cars if c.ID == key), None)
-                c.step(self.input_matrix[c.ID][1], 1.0/self.FREQUENCY, method=self.SOLVER)
+                self.timer+=1.0/self.FREQUENCY
+                c.step(self.input_matrix[c.ID][1], self.timer,1.0/self.FREQUENCY, method=self.SOLVER)
+                
 
             # publish if all the simulation were stepped to reduce delay
             for key, value in self.input_matrix.items():
@@ -260,7 +314,9 @@ class Simulator:
         
             if self.validate_input_matrix():
                 for c in self.cars:
-                    c.step(self.input_matrix[c.ID][1], 1.0/self.FREQUENCY, method=self.SOLVER)
+                    self.timer+=1.0/self.FREQUENCY
+                    c.step(self.input_matrix[c.ID][1],self.timer, 1.0/self.FREQUENCY, method=self.SOLVER)
+                    
             
                 for c in self.cars:# another for loop to reduce delay between the published messages
                     c.publish_state()
@@ -285,6 +341,8 @@ class Simulator:
 
     def shutdown(self):
         self.started=True # to exit loop
+        for car in self.cars:
+            car.plot_traj()
 
 # execute node
 if __name__=="__main__":

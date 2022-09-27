@@ -5,10 +5,10 @@
 
   <!-- Arguments -->
   <arg name="optitrack_ip" default="192.168.1.141" />
-  <arg name="update_frequency" default="20.0" />
+  <arg name="update_frequency" default="1.0" />
   <arg name="angle_gain" default="1" />
   <arg name="angle_offset" default="0.5" />
-  <arg name="tracker_offset" default="0.06" />
+  <arg name="tracker_offset" default="0" />
   <arg name="car_id" default="RC_car_01" />
   <arg name="machine_ip" default="192.168.1.49" />
   <arg name="username" default="nvidia-car01" />
@@ -40,7 +40,7 @@
 
 
   <!-- Launch State observer node -->
-  <node name="state_observer" pkg="vehicle_state_observer" type="optitrack_state_observer_node.py" output="screen" machine="$(arg car_id)_machine">
+  <node name="state_observer_node" pkg="vehicle_state_observer" type="optitrack_state_observer_node.py" output="screen" machine="$(arg car_id)_machine">
      <param name="frequency" value="$(arg update_frequency)" />
      <param name="tracker_offset" value="$(arg tracker_offset)" />
   </node>

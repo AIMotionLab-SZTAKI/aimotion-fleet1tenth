@@ -266,7 +266,7 @@ class Fleet:
             chosen=self.choose_cars()
         
         # one car ID provided
-        if isinstance(IDs, str):
+        elif isinstance(IDs, str):
             c=Car(IDs, self.vehicle_data[IDs])
             print(f"Vehicle control interface initialized for {c.ID}")
             self.cars.append(c)

@@ -3,7 +3,8 @@
 <launch>  
   <!-- Arguments -->
   <arg name="simulation_yaml_path" default="$(find start)/../../scripts/config/simulation.yaml"/>
-  <arg name="launched_vehicles" default="None" />
+  <arg name="launched_vehicles" default="AI_car_01" />
+
 
   <!-- Launch the simulator nodes -->
   <group ns="SIMULATOR">

@@ -8,9 +8,9 @@ import roslaunch
 from roslaunch.core import RLException
 from pathlib import Path
 import time
-from .gui import GUIManager, VehicleChooserDialog, VehicleController
-from .logging import StateLogger
-from .install_utils import create_clients, create_environment
+from ..gui import GUIManager, VehicleChooserDialog, VehicleController
+from ..logging import StateLogger
+from ..install_utils import create_clients, create_environment
 # import pygame
 
 
@@ -42,14 +42,10 @@ class Car:
         print("This function is not implemented in simulation mode!")
 
 
-    def launch_system(self, **kwargs):
+    def launch_system(self, FREQUENCY):
         """
         Launches communication, control and driver nodes onboard the F1/10 vehicle
         
-        Arguments:
-            - OPTITRACK_SERVER_IP(str): Local IP adress of the motion capture server from which the car
-                                   recieves it's position data
-            - FREQUENCY(flat): The system update frequency used by the state estimator and control nodes
         """
 
         # Configure logging
@@ -57,7 +53,7 @@ class Car:
         roslaunch.configure_logging(uuid)
 
         # setup CLI arguments TODO: modify for simulation
-        cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/simulated_vehicle.launch', f'machine_ip:={self.IP_ADRESS}',f'username:={self.USERNAME}',f'password:={self.PASSWORD}',f'car_id:={self.ID}', f'optitrack_ip:={OPTITRACK_SERVER_IP}', f'tracker_offset:={self.MARKER_OFFSET}',f'update_frequency:={FREQUENCY}',f'angle_gain:={self.STEERING_GAINS[0]}', f'angle_offset:={self.STEERING_GAINS[1]}']
+        cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulated_vehicle.launch',f'car_id:={self.ID}',f'frequency:={FREQUENCY}']
         roslaunch_args=cli_args[1:]
         roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
 
@@ -153,7 +149,7 @@ class Fleet:
         """
         self.config_file=config_file # in simulation needed for the launch of the simulator node
 
-        self.launch=None
+        self.simulation_launch=None
 
         try:
             with open(config_file, "r") as f:
@@ -189,7 +185,7 @@ class Fleet:
             rospy.get_master().getSystemState()
             rospy.init_node("FleetMASTER")
         except:
-            raise Exception(f"Unable to contact ros master at {environ['ROS_MASTER_URI']}")
+            raise Exception(f"Unable to contact ROS master at {environ['ROS_MASTER_URI']}")
 
 
     def choose_cars(self):
@@ -247,8 +243,9 @@ class Fleet:
             for car in self.cars:
                 try:
                     car.launch_system(self.FREQUENCY)
-                    car.check_steering()
-                except Exception:
+                    #car.check_steering()
+                except Exception as e:
+                    print(e)
                     print(f"Unable establish connection to {car.ID}, deleting interface...")
                     failed.append(car)
     
@@ -256,9 +253,10 @@ class Fleet:
             for car in self.cars:
                 if car.ID in IDs:
                     try:
-                        car.launch_system(self.OPTITRACK_SERVER_IP, self.FREQUENCY)
+                        car.launch_system(self.FREQUENCY)
                         # car.check_steering() unnecessary for simulation
-                    except Exception:
+                    except Exception as e:
+                        print(e)
                         print(f"Unable establish connection to {car.ID}, deleting interface...")
                         failed.append(car)
         
@@ -269,20 +267,20 @@ class Fleet:
 
         #### SIMULATION ONLY ####
         # launch the simulator node if its not already running
-        if self.launch is not None:
+        if self.simulation_launch is None:
             # Configure logging
             uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
             roslaunch.configure_logging(uuid)
 
             # setup CLI arguments
-            cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/simulator.launch', f'simulation_yaml_path={self.config_file}', f'launched_vehicles={IDs}']
+            cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulator.launch', f'simulation_yaml_path={self.config_file}', f'launched_vehicles={[c.ID for c in self.cars]}']
             roslaunch_args=cli_args[1:]
             roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
 
             # Launch
             try:
-                self.launch=roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
-                self.launch.start()
+                self.simulation_launch=roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
+                self.simulation_launch.start()
             except RLException:
                 raise Exception()
 

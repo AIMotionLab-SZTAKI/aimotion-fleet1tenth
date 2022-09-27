@@ -1,34 +1,35 @@
 #!/usr/bin/env python
 
 import rospy
-from service_definitions.srv import TrajectorySrv, TrajectorySrvResponse
+#from service_definitions.srv import TrajectorySrv, TrajectorySrvResponse
 from scipy.interpolate import splev
 from vehicle_state_msgs.msg import VehicleStateStamped
+from drive_bridge_msg.msg import InputValues
 import math
 import numpy as np
 
 class BaseController:
-    def __init__(self, FREQUENCY):
+    def __init__(self, car_ID, FREQUENCY):
         """
         Base class for the implementation of path following controllers
         """
-        #
+        # freq
         self.dt=1.0/FREQUENCY
 
         # setup vehicle state reciever
         self.VehicleState=None # stores vehicle state data
-        self.state_subscriber=rospy.Subscriber("/state", VehicleStateStamped, self._state_callback)
+        self.state_subscriber=rospy.Subscriber("state", VehicleStateStamped, self._state_callback)
         
         # trajectory service
-        self.trajectory_service=rospy.Service("execute_trajectory", TrajectorySrv, self._execute_trajectory)
+        #self.trajectory_service=rospy.Service("execute_trajectory", TrajectorySrv, self._execute_trajectory)
          
         # controller enable flag
         self.enabled=False # if True enable state callbacks that trigger the control
 
-        self.pub=rospy.Publisher("/control")
+        self.pub=rospy.Publisher("control", InputValues,queue_size=1)
 
         
-    def spin():
+    def spin(self):
         """Prevents the loop from exiting"""
         rospy.spin()
 
@@ -53,6 +54,7 @@ class BaseController:
         self.s=trajectory_data.s_start
         self.s_start=trajectory_data.s_start
         self.s_end=trajectory_data.s_end
+        self.s_ref=self.s_start
 
         # enable state callbacks that trigger the control
         self.enabled=True
@@ -60,19 +62,14 @@ class BaseController:
         while self.enabled:
             pass # wait for the controller to run
 
-        if self.success:
-            return TrajectorySrvResponse(True)
-        return TrajectorySrvResponse(False)
+        #if self.success:
+        #    return TrajectorySrvResponse(True)
+        #return TrajectorySrvResponse(False)
 
 
     def _state_callback(self, data):
-        """
-        State callback funtion that triggers the control
-        """
-        if not self.running:
-            return # only execute callbacks if the controller is enabled
-
         # compute control inputs & publish-> inplemented in subclass
+        pass
 
     def get_path(self,s):
         """
@@ -110,10 +107,14 @@ class BaseController:
         c=abs(x__*y_-x_*y__)/((x_**2+y_**2)**(3/2))
 
         # get speed reference
-        v = splev(s, self.speed_tck)
-
+        #v = splev(s, self.speed_tck)
+        v=0.7 #TODO: speed profile from spline!
 
         return np.array([x, y]), s0, z0, v, c
+
+    def shutdown(self):
+        if self.enabled:
+            self.enabled=False
 
 
 def _clamp(value, bound):
@@ -168,9 +169,9 @@ def _normalize(angle):
     Arguments:
         - angle(float): The angle to normalize, in radian
     """
-    while angle > np.pi / 2:
-        angle -= np.pi
-    while angle < -np.pi / 2:
-        angle += np.pi
+    while angle > np.pi:
+        angle -= 2*np.pi
+    while angle < -np.pi:
+        angle += 2*np.pi
 
     return angle

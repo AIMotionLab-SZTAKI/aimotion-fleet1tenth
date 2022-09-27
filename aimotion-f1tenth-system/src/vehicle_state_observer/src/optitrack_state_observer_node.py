@@ -10,7 +10,7 @@ import math
 
 
 class Estimator:
-    """Class for estimating velocity from position data"""
+    """Class for estimating velocity level information from position data"""
     def __init__(self, l_offs,filter_window, frequency, cutoff):
         # moving average filter window
         self.N=filter_window
@@ -178,11 +178,11 @@ class Estimator:
         self.vx_filt = self.vx_filt + (self.alpha*(vx - self.vx_filt))
         self.vy_filt = self.vy_filt + (self.alpha*(vy - self.vy_filt)) 
 	
-	#self.vx_filt=(x-prev_x)/dt_
-	#self.vy_filt=(y-prev_y)/dt_
+	    #self.vx_filt=(x-prev_x)/dt_
+	    #self.vy_filt=(y-prev_y)/dt_
         # approximate yaw rate
+        
         omega = dfi/dt_
-
         self.omega_filt = self.omega_filt + (self.alpha*(omega-self.omega_filt))
 
         # construct message & publish
@@ -208,19 +208,17 @@ class Estimator:
 
         # store timestamp
         self.prev_time=time_float
-
-
-# Get ROS parames
-l_offs=rospy.get_param("~tracker_offset", 0.2225) # distance of tracked RigidBody from CoM
-frequency=rospy.get_param("~frequency", 20.0)
-cutoff=rospy.get_param("~cutoff", 2)
-
  
 
 if __name__ == '__main__':
     try:
         # Create node
         rospy.init_node('state_observer_node', anonymous=True)
+
+        # Get ROS parames
+        l_offs=rospy.get_param("~tracker_offset", 0.2225) # distance of tracked RigidBody from CoM
+        frequency=rospy.get_param("~frequency", 20.0)
+        cutoff=rospy.get_param("~cutoff", 2)
 
         estimator=Estimator(l_offs=l_offs, filter_window=10, frequency=frequency, cutoff=cutoff)
         
