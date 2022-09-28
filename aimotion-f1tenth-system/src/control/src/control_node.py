@@ -75,7 +75,7 @@ path=Path(np.array(
 if __name__=="__main__":
     try:
         rospy.init_node("aimotion_control_node", anonymous=True)
-        controller=CombinedController(car_ID=rospy.get_param("~car_ID"),FREQUENCY=float(rospy.get_param("~FREQUENCY", 20)),projection_window=3, projection_step=0.01)
+        controller=CombinedController(FREQUENCY=float(rospy.get_param("~FREQUENCY", 20)),projection_window=3, projection_step=0.01)
         #controller.speed_tck=
         controller.trajectory_tck=path.tck
         controller.s=0

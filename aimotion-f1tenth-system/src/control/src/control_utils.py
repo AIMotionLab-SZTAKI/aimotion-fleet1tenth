@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 class BaseController:
-    def __init__(self, car_ID, FREQUENCY):
+    def __init__(self,FREQUENCY):
         """
         Base class for the implementation of path following controllers
         """
@@ -17,11 +17,7 @@ class BaseController:
         self.dt=1.0/FREQUENCY
 
         # setup vehicle state reciever
-        self.VehicleState=None # stores vehicle state data
         self.state_subscriber=rospy.Subscriber("state", VehicleStateStamped, self._state_callback)
-        
-        # trajectory service
-        #self.trajectory_service=rospy.Service("execute_trajectory", TrajectorySrv, self._execute_trajectory)
          
         # controller enable flag
         self.enabled=False # if True enable state callbacks that trigger the control
@@ -108,7 +104,7 @@ class BaseController:
 
         # get speed reference
         #v = splev(s, self.speed_tck)
-        v=0.7 #TODO: speed profile from spline!
+        v=3#TODO: speed profile from spline!
 
         return np.array([x, y]), s0, z0, v, c
 

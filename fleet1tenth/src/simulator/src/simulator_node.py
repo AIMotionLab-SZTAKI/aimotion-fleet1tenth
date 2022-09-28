@@ -34,6 +34,20 @@ def _normalize(angle):
 
     return angle
 
+def _clamp(value, bound):
+    if isinstance(bound, int) or isinstance(bound, float):
+        if value < -bound:
+            return -bound
+        elif value > bound:
+            return bound
+        return value
+    elif isinstance(bound, tuple):
+        if value < bound[0]:
+            return bound[0]
+        elif value > bound[1]:
+            return bound[1]
+        return value
+
 
 class SimulatedCar:
     def __init__(self, ID, model_data, default_model):
@@ -73,6 +87,9 @@ class SimulatedCar:
             # tire params
             self.C_f=model_data["C_f"]
             self.C_r=model_data["C_r"]
+
+            self.delta_max=model_data["delta_max"]
+            self.d_max=model_data["d_max"]
         
         except KeyError: # in case of key error return to default model
             self.m=default_model["m"]
@@ -88,6 +105,9 @@ class SimulatedCar:
             # tire params
             self.C_f=default_model["C_f"]
             self.C_r=default_model["C_r"]
+
+            self.delta_max=model_data["delta_max"]
+            self.d_max=model_data["d_max"]
 
 
         # init list for the states, use the initial_pose
@@ -119,15 +139,9 @@ class SimulatedCar:
                 - "LSODA": Adams/BDF method with automatic stiffness detection and switching. This is a wrapper of the Fortran solver from ODEPACK.
         """
         inputs=list(inputs)
-        if inputs[0]>0.5:
-            inputs[0]=0.5
-        elif inputs[0]<-0.1:
-            inputs[0]=0
+        inputs[0]=_clamp(inputs[0],self.d_max)
         
-        if inputs[1]>0.5:
-            inputs[1]=0.5
-        elif inputs[0]<-0.5:
-            inputs[0]=-0.5
+        inputs[1]=_clamp(inputs[1],self.delta_max)
         
         self.d.append(inputs[0])
         self.delta.append(inputs[1])
@@ -170,14 +184,17 @@ class SimulatedCar:
             -states(ndarray): 1D vector of the state variables 
         """
         # retrieve inputs & states
+        d, delta = inputs
+        
+        # retrieve inputs & states
         x,y,phi,v_xi,v_eta,omega=states
 
         # calculate lognitudinal tire force
-        F_xi=self.C_m1*self.d[-1]-self.C_m2*v_xi-np.sign(v_xi)*self.C_m3
+        F_xi=self.C_m1*d-self.C_m2*v_xi-np.sign(v_xi)*self.C_m3
 
         # obtain lateral tire forces
         if abs(v_xi)>0.5:# only use tire model for moving vehicles
-            alpha_f=-(omega*self.l_f+v_eta)/v_xi+self.delta[-1]
+            alpha_f=-(omega*self.l_f+v_eta)/v_xi+delta
             alpha_r=(omega*self.l_r-v_eta)/v_xi
             F_f_eta=self.C_f*alpha_f
             F_r_eta=self.C_r*alpha_r
@@ -191,9 +208,9 @@ class SimulatedCar:
         d_y=v_xi*np.sin(phi)+v_eta*np.cos(phi)
         d_phi=omega
 
-        d_v_xi=1/self.m*(F_xi+F_xi*np.cos(self.delta[-1])-F_f_eta*np.sin(self.delta[-1])+self.m*v_eta*omega)
-        d_v_eta=1/self.m*(F_r_eta+F_xi*np.sin(self.delta[-1])+F_f_eta*np.cos(self.delta[-1])-self.m*v_xi*omega)
-        d_omega=1/self.I_z*(F_f_eta*self.l_f*np.cos(self.delta[-1])+F_xi*self.l_f*np.sin(self.delta[-1])-F_r_eta*self.l_r)
+        d_v_xi=1/self.m*(F_xi+F_xi*np.cos(delta)-F_f_eta*np.sin(delta)+self.m*v_eta*omega)
+        d_v_eta=1/self.m*(F_r_eta+F_xi*np.sin(delta)+F_f_eta*np.cos(delta)-self.m*v_xi*omega)
+        d_omega=1/self.I_z*(F_f_eta*self.l_f*np.cos(delta)+F_xi*self.l_f*np.sin(delta)-F_r_eta*self.l_r)
 
         return np.array([d_x,d_y,d_phi,d_v_xi,d_v_eta,d_omega])
 
@@ -216,8 +233,7 @@ class SimulatedCar:
         # publish
         self.pub.publish(msg)
     
-    def plot_traj(self):
-        plt.plot(self.x, self.y)
+   
 
 
 
@@ -322,6 +338,8 @@ class Simulator:
                     c.publish_state()
                 self.reset_input_matrix()
 
+
+
     def reset_input_matrix(self):
         """
         Resets the input matrix
@@ -341,14 +359,12 @@ class Simulator:
 
     def shutdown(self):
         self.started=True # to exit loop
-        for car in self.cars:
-            car.plot_traj()
 
 # execute node
 if __name__=="__main__":
     try:
         rospy.init_node("aimotion_simulator")
-        simulator=Simulator(FREQUENCY=rospy.get_param("~FREQUENCY", default=25.0), 
+        simulator=Simulator(FREQUENCY=rospy.get_param("~FREQUENCY", default=20.0), 
                             SOLVER=rospy.get_param("~SOLVER", default="RK45"),
                             vehicle_data=rospy.get_param("~vehicles"),
                             default_model=rospy.get_param("~default_vehicle_model"),

@@ -13,7 +13,7 @@ FREQUENCY: 20.0
 # dynamic single track vehicle model parameters
 vehicles:
   AI_car_01:
-    init_pose: [0,0,0.4485]
+    init_pose: [0,0,0.442544] # [ x[m], y[m], phi[m] ]
     # Specify custom model parameters here!
     # If no custom paramters are provided the default_vehicle_model will be used!
     #m:
@@ -41,10 +41,14 @@ default_vehicle_model: # default model of the simulator
   I_z: 0.0796 # [kg m^2]
 
   # drivetrain parameters
-  C_m1: 41.7960 # [N]
-  C_m2: 2.0152 # [Ns/m]
-  C_m3: 0.4328 # [N]
+  C_m1: 61.383 # [N]
+  C_m2: 3.012 # [Ns/m]
+  C_m3: 0.604 # [N]
 
   # tire parameters
   C_f: 41.7372 # [N/rad]
   C_r: 29.4662 # [N/rad]
+
+  delta_max: 0.5 # [1]
+
+  d_max: 0.2
