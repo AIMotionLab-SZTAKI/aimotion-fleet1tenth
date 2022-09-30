@@ -106,8 +106,8 @@ class SimulatedCar:
             self.C_f=default_model["C_f"]
             self.C_r=default_model["C_r"]
 
-            self.delta_max=model_data["delta_max"]
-            self.d_max=model_data["d_max"]
+            self.delta_max=default_model["delta_max"]
+            self.d_max=default_model["d_max"]
 
 
         # init list for the states, use the initial_pose
