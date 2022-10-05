@@ -57,6 +57,7 @@ class Car:
         Arguments:
             - ROS_MASTER_URI: IP adress of the PC running roscore
         """
+        print(f"Installing aimotion-f1tenth-system on {self.ID}")
 
         # create connections
         SSH_client, SFTP_client=create_clients(self.IP_ADRESS, self.USERNAME, self.PASSWORD)
@@ -239,6 +240,8 @@ class Fleet:
         except:
             raise Exception(f"Unable to contact ros master at {environ['ROS_MASTER_URI']}")
 
+        
+
 
     def choose_cars(self):
         """
@@ -264,6 +267,11 @@ class Fleet:
         # no ID is specified opens a dialog
         if IDs is None:
             chosen=self.choose_cars()
+            for id in chosen:
+                c=Car(id, self.vehicle_data[id])
+                print(f"Vehicle control interface initialized for {c.ID}")
+                self.cars.append(c)
+
         
         # one car ID provided
         elif isinstance(IDs, str):
@@ -273,12 +281,14 @@ class Fleet:
 
         # multiple IDs provided 
         elif isinstance(IDs, list):
-            for id in chosen:
+            for id in IDs:
                 c=Car(id, self.vehicle_data[id])
                 print(f"Vehicle control interface initialized for {c.ID}")
                 self.cars.append(c)
         else:
             raise ValueError("Unexpected argument... IDs must be list or str!")
+
+        
 
 
     def drop_cars(self):
@@ -321,8 +331,9 @@ class Fleet:
                     try:
                         car.launch_system(FREQUENCY=self.FREQUENCY, OPTITRACK_SERVER_IP=self.OPTITRACK_SERVER_IP)
                         car.check_steering()
-                    except Exception:
+                    except Exception as e:
                         print(f"Unable establish connection to {car.ID}, deleting interface...")
+                        print(e)
                         failed.append(car)
         
         # if any of the launchers fail delete the control interface
@@ -400,6 +411,7 @@ class Fleet:
         Arguments:
             - ID: the ID of the selected control interface
         """
+
 
         car=next((c for c in self.cars if c.ID == ID), None)
         if car is None:

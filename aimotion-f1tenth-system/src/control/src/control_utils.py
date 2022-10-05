@@ -7,6 +7,8 @@ from vehicle_state_msgs.msg import VehicleStateStamped
 from drive_bridge_msg.msg import InputValues
 import math
 import numpy as np
+from control.msg import trajectoryAction, trajectoryFeedback, trajectoryResult
+import actionlib
 
 class BaseController:
     def __init__(self,FREQUENCY):
@@ -24,6 +26,12 @@ class BaseController:
 
         self.pub=rospy.Publisher("control", InputValues,queue_size=1)
 
+        self.trajectory_server=actionlib.SimpleActionServer("execute_trajectory", trajectoryAction, execute_cb=self._execute_trajectory, auto_start=False)
+        self.trajectory_server.start()
+
+        self.action_feedback=trajectoryFeedback()
+        self.action_result=trajectoryResult()
+
         
     def spin(self):
         """Prevents the loop from exiting"""
@@ -35,16 +43,17 @@ class BaseController:
         Callback function that recieves trajectories from the command PC
         """
         # set reference trajectory
-        t=trajectory_data.path_t
-        c=trajectory_data.path_c
-        k=trajectory_data.path_k
-        self.trajectory_tck=(t,c,k)
+        path_t=np.array(trajectory_data.path_t)
+        path_cx=np.array(trajectory_data.path_cx)
+        path_cy=np.array(trajectory_data.path_cy)
+        path_k=trajectory_data.path_k
+        self.trajectory_tck=(path_t,[path_cx,path_cy],path_k)
 
         # set reference speed profile
-        t=trajectory_data.v_t
-        c=trajectory_data.v_c
-        k=trajectory_data.v_k
-        self.speed_tck=(t,c,k)
+        speed_t=np.array(trajectory_data.speed_t)
+        speed_c=np.array(trajectory_data.speed_c)
+        speed_k=trajectory_data.speed_k
+        self.speed_tck=(speed_t,speed_c,speed_k)
 
         #set trajectory lenght
         self.s=trajectory_data.s_start
@@ -54,13 +63,9 @@ class BaseController:
 
         # enable state callbacks that trigger the control
         self.enabled=True
-        print("Executing trajectory...")
+        
         while self.enabled:
             pass # wait for the controller to run
-
-        #if self.success:
-        #    return TrajectorySrvResponse(True)
-        #return TrajectorySrvResponse(False)
 
 
     def _state_callback(self, data):
@@ -103,14 +108,47 @@ class BaseController:
         c=abs(x__*y_-x_*y__)/((x_**2+y_**2)**(3/2))
 
         # get speed reference
-        #v = splev(s, self.speed_tck)
-        v=3#TODO: speed profile from spline!
+        v = splev(s, self.speed_tck)
 
         return np.array([x, y]), s0, z0, v, c
 
     def shutdown(self):
+        """Stops the execution"""
         if self.enabled:
             self.enabled=False
+            self.action_result.success=False
+            self.trajectory_server.set_aborted(self.action_result)
+
+    
+    def check_progress(self):
+        """
+        Function that checks if the execution of the trajectory has been successfull
+
+        Returns:
+            - True: The trajectory has been executed successfully.
+            - False: The trajectory has not been executed successfully.
+        """
+        if abs(self.s-self.s_end)<0.05: # 5 cm deviation is enabled TODO: check this value in practice
+            self.enabled=False
+
+            # stop the vehicle
+            msg=InputValues()
+            msg.d=0
+            msg.delta=0
+            self.pub.publish(msg)
+
+            # publish action feedback and result
+            self.action_result.success=True
+            self.action_feedback.progress=1.0
+            self.trajectory_server.publish_feedback(self.action_feedback)
+            self.trajectory_server.set_succeeded(self.action_result)
+            return True
+        else:
+            # publish action feedback
+            self.action_feedback.progress=(self.s-self.s_start)/(self.s_end-self.s_start)
+            self.trajectory_server.publish_feedback(self.action_feedback)
+            return False 
+
 
 
 def _clamp(value, bound):

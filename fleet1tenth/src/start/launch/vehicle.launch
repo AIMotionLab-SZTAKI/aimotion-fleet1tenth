@@ -39,8 +39,10 @@
  </node>
 
  <!-- Launch path following controller node -->
-  <node pkg="control" type="control_node.py" name="aimotion_control_node" output="screen" machine="$(arg car_id)_machine">
- </node>
+  <node pkg="control" type="control_node.py" name="control_node" output="screen" machine="$(arg car_id)_machine">
+      <param name="car_ID" value="$(arg car_id)" />
+      <param name="FREQUENCY" value="$(arg update_frequency)" />
+  </node>
 
   <!-- Launch State observer node -->
   <node name="state_observer_node" pkg="vehicle_state_observer" type="optitrack_state_observer_node.py" output="screen" machine="$(arg car_id)_machine">

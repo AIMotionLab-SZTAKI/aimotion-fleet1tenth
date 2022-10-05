@@ -1,22 +1,11 @@
-#! /usr/bin/env python
+import numpy as np
+from scipy.interpolate import splprep, splrep, splev
 
 
-# Currently developed in Python2.7
-
-from controllers import CombinedController
-import rospy
-#from scipy.interpolate import splprep,splrep, splev
-#import numpy as np
-#from drive_bridge_msg.msg import InputValues
-#from vehicle_state_msgs.msg import VehicleStateStamped 
-
-
-"""
-###ONLY FOR TESTING !REMOVE!###
 class Path:
     def __init__(
         self,
-        path_points,
+        path_points,const_speed
     ):
         self.x_points = path_points[:, 0].tolist()
         self.y_points = path_points[:, 1].tolist()
@@ -41,7 +30,10 @@ class Path:
         par = np.linspace(0, self.length, 1001)
         par = np.reshape(par, par.size)
 
-        self.tck, self.u, *rest = splprep([X, Y], k=2, s=0.001, u=par)
+        self.tck, self.u, *rest = splprep([X, Y], k=3, s=0.001, u=par)
+
+        speed_vect=const_speed*np.ones(len(self.u))
+        self.speed_tck=splrep(self.u,speed_vect)
 
 
 path=Path(np.array(
@@ -68,24 +60,6 @@ path=Path(np.array(
         [-1, -1],
         [0, 0],
     ]
+), 1
 )
-)
-
-"""
-
-
-if __name__=="__main__":
-    try:
-        rospy.init_node("aimotion_control_node", anonymous=True)
-        controller=CombinedController(FREQUENCY=float(rospy.get_param("~FREQUENCY", 20)),projection_window=3, projection_step=0.01)
-        # controller.speed_tck=
-        # controller.trajectory_tck=path.tck
-        # controller.s=0
-        # controller.s_ref=0
-        # controller.s_start=0
-        # controller.s_end=path.length
-        # controller.enabled=False
-        rospy.on_shutdown(controller.shutdown)
-        controller.spin()
-    except rospy.ROSInterruptException:
-        pass
+print(splev(np.linspace(0, path.length, 100),path.speed_tck))

@@ -11,6 +11,8 @@ import time
 from ..gui import GUIManager, VehicleChooserDialog, VehicleController
 from ..logging import StateLogger
 from ..install_utils import create_clients, create_environment
+import actionlib
+from control.msg import trajectoryAction, trajectoryGoal
 # import pygame
 
 
@@ -36,6 +38,9 @@ class Car:
 
         # create ROS control publisher
         self.control_pub=rospy.Publisher(ID+"/control", InputValues, queue_size=1)
+
+        # setup ROS action clients
+        self.execute_trajectory_client=actionlib.SimpleActionClient(ID+"/execute_trajectory", trajectoryAction)
         
 
     def install_system(self, **kwargs):
@@ -133,7 +138,38 @@ class Car:
             print("State logger must be initialized before calling the start_logging/stop_logging functions!")
 
 
+    def execute_trajectory(self, path_tck, speed_tck, range):
+        if not self.execute_trajectory_client.wait_for_server(timeout=rospy.Duration(secs=2)):
+            raise Exception("Unable to upload the trajectory: Control action server timed out!")
+        
+        goal=trajectoryGoal()
+        
+        # 2D path data
+        goal.path_t=path_tck[0].tolist()
+        goal.path_cx=path_tck[1][0].tolist()
+        goal.path_cy=path_tck[1][1].tolist()
+        goal.path_k=path_tck[2]
 
+        # 1D speed profile data
+        goal.speed_t=speed_tck[0].tolist()
+        goal.speed_c=speed_tck[1].tolist()
+        goal.speed_k=speed_tck[2]
+
+        goal.s_start=range[0]
+        goal.s_end=range[1]
+
+        self.execute_trajectory_client.send_goal(goal, feedback_cb=None) # TODO: consider adding feedback function
+        print(f"{self.ID} exectuing the uploaded trajectory...")
+
+        self.execute_trajectory_client.wait_for_result()
+        
+        result=self.execute_trajectory_client.get_result()
+
+        if result:
+            print(f"{self.ID} executed the uploaded trajectory successfully!")
+        else:
+            print(f"{self.ID} failed to execute the uploaded trajectory!")
+        return result
 
 
 
@@ -147,12 +183,15 @@ class Fleet:
                             configuration data needed for the setup
         
         """
-        self.config_file=config_file # in simulation needed for the launch of the simulator node
+        if config_file is not None:
+            self.config_file=config_file # in simulation needed for the launch of the simulator node
+        else:
+            self.config_file=str(Path(__file__).parents[2])+"/config/simulation.yaml"
 
         self.simulation_launch=None
 
         try:
-            with open(config_file, "r") as f:
+            with open(self.config_file, "r") as f:
                 try:
                     config_data=yaml.safe_load(f)
                 except yaml.YAMLError as e:
@@ -203,16 +242,30 @@ class Fleet:
             return []
 
     
-    def init_cars(self):
+    def init_cars(self, IDs=None):
         """
         Launches a chooser application to select vehicle's to use the initializes the control interface for them
         """
         self.drop_cars()
-        chosen=self.choose_cars()
-        for id in chosen:
-            c=Car(id, self.vehicle_data[id])
-            print(f"Vehicle control interface initialized for {c.ID}")
-            self.cars.append(c)
+        if IDs is not None:
+            if isinstance(IDs, str):
+                c=Car(IDs, self.vehicle_data[IDs])
+                print(f"Vehicle control interface initialized for {c.ID}")
+                self.cars.append(c)
+            elif isinstance(IDs, list) or isinstance(IDs, tuple):
+                for id in IDs:
+                    c=Car(id, self.vehicle_data[id])
+                    print(f"Vehicle control interface initialized for {c.ID}")
+                    self.cars.append(c)
+            else:
+                raise Exception("Unsupported vatiable type for IDs! Accepted: str,list,tuple")
+
+        else:
+            chosen=self.choose_cars()
+            for id in chosen:
+                c=Car(id, self.vehicle_data[id])
+                print(f"Vehicle control interface initialized for {c.ID}")
+                self.cars.append(c)
 
 
     def drop_cars(self):
@@ -283,6 +336,8 @@ class Fleet:
                 self.simulation_launch.start()
             except RLException:
                 raise Exception()
+
+        time.sleep(2) # sleep to enable node startup before processing further
 
 
     def shutdown_cars(self, ID=None):

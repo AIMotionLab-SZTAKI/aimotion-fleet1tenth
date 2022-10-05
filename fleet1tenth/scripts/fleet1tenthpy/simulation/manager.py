@@ -19,6 +19,8 @@ class SimulationManager:
             l=CarLogs(ID)
             self.car_logs.append(l)
 
+        self.gui=SimulatorVisualization()
+
 
 class CarLogs:
     def __init__(self, ID):
@@ -45,10 +47,8 @@ class CarLogs:
         self.d=[]
         self.delta=[]
 
-        self.sub=rospy,rospy.Subscriber("/"+self.ID+"/state", VehicleStateStamped, callback=self._log_callback)
+        self.sub=rospy.Subscriber("/"+self.ID+"/state", VehicleStateStamped, callback=self._log_callback)
 
-        self.gui=SimulatorVisualization()
-        self.gui.show()
 
     def _log_callback(self, data):
         time=float(str(data.header.stamp.secs)+str(data.header.stamp.nsecs).zfill(9))
@@ -64,4 +64,14 @@ class CarLogs:
         self.d.append(data.duty_cycle)
         self.delta.append(data.delta)
 
-    
+    def get_position_data(self):
+        return self.x, self.y, self.phi
+
+    def get_velocity_data(self):
+        return self.v_xi, self.v_eta, self.omega
+
+    def get_input_data(self):
+        return self.d, self.delta
+
+    def get_time(self):
+        return self.t

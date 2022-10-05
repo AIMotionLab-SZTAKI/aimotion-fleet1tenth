@@ -1,5 +1,5 @@
 from fleet1tenthpy import Fleet
-
+import time
 fleet=Fleet("config/configuration.yaml")
 
 # opens a dialog where users can choose vehicless from fleet to initialize

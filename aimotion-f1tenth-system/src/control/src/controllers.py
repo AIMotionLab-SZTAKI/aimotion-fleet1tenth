@@ -66,19 +66,9 @@ class CombinedController(BaseController):
         # get path data at projected reference
         ref_pos, s0, z0, v_ref, c=self.get_path_data(self.s)
 
-        ### CHECK IF THE TRAJECOTRY WAS EXECUTED SUCCESSFULLY ###
-        if abs(self.s-self.s_end)<0.05: # 5 cm deviation is enabled
-            # disable the controller TODO action response to the control manager
-            self.enabled=False
-            self.success=True
-
-            # stop the vehicle
-            msg=InputValues()
-            msg.d=0
-            msg.delta=0
-            self.pub.publish(msg)
-            print("Success")
-            return
+        ### CHECK CURRENT POSITION & PROVIDE ROS ACTION FEEDBACK ###
+        if self.check_progress():
+            return # if the goal is reached exit the function
 
 
         ### MODEL STATES IN PATH COORDINATES
@@ -116,6 +106,8 @@ class CombinedController(BaseController):
         k_long1,k_long2=self.get_longitudinal_feedback_gains(p)
         d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
 
+        
+
         ### PUBLISH INPUTS ###
         msg=InputValues()
         msg.d=d
@@ -126,6 +118,7 @@ class CombinedController(BaseController):
         ### step reference parameter
         self.s_ref+=v_ref*self.dt
 
+        self.logfile.write(f"t,{position[0]},{position[1]},{phi},{v_xi},{v_eta},omega,,{delta},{z1},{theta_e}\n")
 
     def get_lateral_feedback_gains(self, v_xi):
         if v_xi>0:

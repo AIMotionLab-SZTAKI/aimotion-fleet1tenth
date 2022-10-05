@@ -168,9 +168,9 @@ class VehicleController(QDialog):
             elif key==Qt.Key_Down:
                 self.d_current=-self.d_max
             elif key==Qt.Key_Left:
-                self.delta_current=-self.delta_max
-            elif key==Qt.Key_Right:
                 self.delta_current=self.delta_max
+            elif key==Qt.Key_Right:
+                self.delta_current=-self.delta_max
             elif key==Qt.Key_Shift: # return focus instead of quitting
                 self.setFocus()
                 
@@ -183,9 +183,9 @@ class VehicleController(QDialog):
                 self.d_current=0
             elif key==Qt.Key_Down and self.d_current<0:
                 self.d_current=0
-            elif key==Qt.Key_Left and self.delta_current<0:
+            elif key==Qt.Key_Left and self.delta_current>0:
                 self.delta_current=0
-            elif key==Qt.Key_Right and self.delta_current>0:
+            elif key==Qt.Key_Right and self.delta_current<0:
                 self.delta_current=0
             elif key==Qt.Key_Shift: # return focus instead of quitting
                 self.setFocus()

@@ -221,6 +221,7 @@ class SimulatedCar:
 
         # generate message
         msg=VehicleStateStamped()
+        msg.header.stamp=rospy.Time.from_sec(self.t[-1])
         msg.position_x=self.x[-1]
         msg.position_y=self.y[-1]
         msg.heading_angle=self.phi[-1]
