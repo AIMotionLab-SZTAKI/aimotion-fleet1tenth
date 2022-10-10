@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from os import environ
+from gevent import config
 import yaml
 import rospy
 from drive_bridge_msg.msg import InputValues
@@ -11,6 +12,8 @@ import time
 from .gui import GUIManager, VehicleChooserDialog, VehicleController
 from .logging import StateLogger
 from .install_utils import create_clients, create_environment
+from control.msg import trajectoryAction, trajectoryGoal
+import actionlib
 
 
 class Car:
@@ -42,6 +45,17 @@ class Car:
         # TODO: consider adding modelling info instead of storing data onboard
         self.STEERING_GAINS=PARAMS_DICT["STEERING_GAINS"]
         self.MARKER_OFFSET=PARAMS_DICT["MARKER_OFFSET"]
+        self.MOTOR_LIMIT=PARAMS_DICT["MOTOR_LIMIT"]
+
+        self.LATERAL_CONTROL_GAINS=PARAMS_DICT["control"]["LATERAL_CONTROL_GAINS"]
+        self.LONGITUDINAL_CONTROL_GAINS=PARAMS_DICT["control"]["LONGITUDINAL_CONTROL_GAINS"]
+
+        self.MOTION_CAPTURE=PARAMS_DICT["MOTION_CAPTURE"]
+        try:
+            self.MOCAP_EXTERNAL_TOPIC=PARAMS_DICT["MOCAP_EXTERNAL_TOPIC"]
+        except KeyError:
+            if self.MOTION_CAPTURE=="external":
+                raise Exception("MOTION_CAPTURE is set to 'external', but no topic name is provided. To resolve this issue set MOCAP_EXTERNAL_TOPIC is the configuration file.")
 
         self.running=False
         self.launch=None
@@ -49,6 +63,37 @@ class Car:
         # create ROS control publisher
         self.control_pub=rospy.Publisher(ID+"/control", InputValues, queue_size=1)
         
+        # setup ROS action clients
+        self.execute_trajectory_client=actionlib.SimpleActionClient(ID+"/execute_trajectory", trajectoryAction)
+        
+
+    def update_param(self, param_name, value):
+        """
+        Funtion for updating the control & state estimator parameters from code, without modifying the default values in the configuration file. 
+        To complete the update procedure this function also restarts the onboard software stack.
+
+        Arguments:
+            - param_name(str): Must be one of the following list: [STEERING_GAINS,MARKER_OFFSET,LATERAL_CONTROL_GAINS,LONGITUDINAL_CONTROL_GAINS,MOTOR_LIMIT]
+            - value(float/list/dict): The value used to update the specified parameter. Type must match the one used in the configuration file. TODO: check if datatypes match raise exceptions
+        """
+        if param_name=="STEERING_GAINS":
+            self.STEERING_GAINS=value
+        elif param_name=="MARKER_OFFSET":
+            self.MARKER_OFFSET=value
+        elif param_name=="LATERAL_CONTROL_GAINS":
+            self.LATERAL_CONTROL_GAINS=value
+        elif param_name=="LONGITUDINAL_CONTROL_GAINS":
+            self.LONGITUDINAL_CONTROL_GAINS=value
+        elif param_name=="MOTOR_LIMIT":
+            self.MOTOR_LIMIT=value
+        else:
+            print("Unkown parameter name!")
+
+        self.shutdown()
+        self.launch_system()
+
+
+
 
     def install_system(self, ROS_MASTER_URI):
         """
@@ -87,22 +132,32 @@ class Car:
         print(f"Successfully installed aimotion-f1tenth-system on vehicle {self.ID}")
 
 
-    def launch_system(self, FREQUENCY, OPTITRACK_SERVER_IP):
+    def launch_system(self):
         """
         Launches communication, control and driver nodes onboard the F1/10 vehicle
-        
-        Arguments:
-            - OPTITRACK_SERVER_IP(str): Local IP adress of the motion capture server from which the car
-                                   recieves it's position data
-            - FREQUENCY(flat): The system update frequency used by the state estimator and control nodes
         """
+
+        # set ROS parameters
+        rospy.set_param("/"+self.ID+"/drive_bridge/angle_gain", self.STEERING_GAINS[0])
+        rospy.set_param("/"+self.ID+"/drive_bridge/angle_offset", self.STEERING_GAINS[1])
+        rospy.set_param("/"+self.ID+"/drive_bridge/reference_limit", self.MOTOR_LIMIT)
+
+        rospy.set_param("/"+self.ID+"/state_observer_node/tracker_offset", self.MARKER_OFFSET)
+        if self.MOTION_CAPTURE == "external":
+            try:
+                rospy.set_param("/"+self.ID+"/state_observer_node/mocap_external_topic", self.MOCAP_EXTERNAL_TOPIC)
+            except KeyError:
+                raise Exception("MOTION_CAPTURE is set to external but no external topic name is provided! To resolve this issue specify MOCAP_EXTERNAL_TOPIC in the configuration file")
+
+        rospy.set_param("/"+self.ID+"/path_following_control_node/lateral_gains", self.LATERAL_CONTROL_GAINS)
+        rospy.set_param("/"+self.ID+"/path_following_control_node/longitudinal_gains", self.LONGITUDINAL_CONTROL_GAINS)
 
         # Configure logging
         uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
         # setup CLI arguments
-        cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/vehicle.launch', f'machine_ip:={self.IP_ADRESS}',f'username:={self.USERNAME}',f'password:={self.PASSWORD}',f'car_id:={self.ID}', f'optitrack_ip:={OPTITRACK_SERVER_IP}', f'tracker_offset:={self.MARKER_OFFSET}',f'update_frequency:={FREQUENCY}',f'angle_gain:={self.STEERING_GAINS[0]}', f'angle_offset:={self.STEERING_GAINS[1]}']
+        cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/vehicle.launch', f'machine_ip:={self.IP_ADRESS}',f'username:={self.USERNAME}',f'password:={self.PASSWORD}',f'car_id:={self.ID}', f'motion_capture:={self.MOTION_CAPTURE}']
         roslaunch_args=cli_args[1:]
         roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
 
@@ -110,7 +165,8 @@ class Car:
         try:
             self.launch=roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
             self.launch.start()
-        except RLException:
+        except RLException as e:
+            print(e)
             raise Exception()
 
 
@@ -186,6 +242,45 @@ class Car:
             print("State logger must be initialized before calling the start_logging/stop_logging functions!")
 
 
+    def execute_trajectory(self, path_tck, speed_tck, range):
+        if not self.execute_trajectory_client.wait_for_server(timeout=rospy.Duration(secs=5)):
+            raise Exception("Unable to upload the trajectory: Control action server timed out!")
+        
+        goal=trajectoryGoal()
+        
+        # 2D path data
+        goal.path_t=path_tck[0].tolist()
+        goal.path_cx=path_tck[1][0].tolist()
+        goal.path_cy=path_tck[1][1].tolist()
+        goal.path_k=path_tck[2]
+
+        # 1D speed profile data
+        goal.speed_t=speed_tck[0].tolist()
+        goal.speed_c=speed_tck[1].tolist()
+        goal.speed_k=speed_tck[2]
+
+        goal.s_start=range[0]
+        goal.s_end=range[1]
+
+        def cb(progress):
+            print(progress)
+
+        self.execute_trajectory_client.send_goal(goal, feedback_cb=cb) # TODO: consider adding feedback function
+        print(f"{self.ID} executing the uploaded trajectory...")
+
+        self.execute_trajectory_client.wait_for_result()
+        
+        result=self.execute_trajectory_client.get_result()
+
+        if result.success:
+            print(f"{self.ID} executed the uploaded trajectory successfully!")
+        else:
+            print(f"{self.ID} failed to execute the uploaded trajectory!")
+        return result
+
+
+
+
 
 
 
@@ -200,6 +295,8 @@ class Fleet:
                             configuration data needed for the setup
         
         """
+        if config_file is None:
+            config_file=str(Path(__file__).parents[1])+"/config/configuration.yaml"
 
         try:
             with open(config_file, "r") as f:
@@ -218,7 +315,7 @@ class Fleet:
         environ["ROS_IP"]=config_data["ROS_IP"]
         
         # OptiTrack configuration
-        self.OPTITRACK_SERVER_IP=config_data["OPTITRACK_SERVER_IP"] 
+        self.OPTITRACK_SERVER_IP=config_data["OPTITRACK_SERVER_IP"]
 
         # System frequency for the controllers, state observers...
         self.FREQUENCY=config_data["FREQUENCY"]
@@ -231,6 +328,15 @@ class Fleet:
 
         # init GUI manager
         self.GUIManager=GUIManager()
+
+        # set ROS parameters
+        try:
+            rospy.set_param("/AIMotionLab/mocap_server", self.OPTITRACK_SERVER_IP)
+        except KeyError:
+            print("OptiTrack server IP is not set. Vehicles expect position data stream from external ROS node!")
+        
+        rospy.set_param("/AIMotionLab/FREQUENCY",self.FREQUENCY)
+
 
         # initialize ROS node
         try:
@@ -272,7 +378,6 @@ class Fleet:
                 print(f"Vehicle control interface initialized for {c.ID}")
                 self.cars.append(c)
 
-        
         # one car ID provided
         elif isinstance(IDs, str):
             c=Car(IDs, self.vehicle_data[IDs])
@@ -286,7 +391,7 @@ class Fleet:
                 print(f"Vehicle control interface initialized for {c.ID}")
                 self.cars.append(c)
         else:
-            raise ValueError("Unexpected argument... IDs must be list or str!")
+            raise ValueError("Unexpected argument... IDs must be list, str or None!")
 
         
 
@@ -318,7 +423,7 @@ class Fleet:
         if IDs is None: # start all cars
             for car in self.cars:
                 try:
-                    car.launch_system(FREQUENCY=self.FREQUENCY, OPTITRACK_SERVER_IP=self.OPTITRACK_SERVER_IP)
+                    car.launch_system()
                     car.check_steering()
                 except Exception:
                     print(f"Unable establish connection to {car.ID}, deleting interface...")
@@ -329,7 +434,7 @@ class Fleet:
             for car in self.cars:
                 if car.ID in IDs:
                     try:
-                        car.launch_system(FREQUENCY=self.FREQUENCY, OPTITRACK_SERVER_IP=self.OPTITRACK_SERVER_IP)
+                        car.launch_system()
                         car.check_steering()
                     except Exception as e:
                         print(f"Unable establish connection to {car.ID}, deleting interface...")
@@ -374,7 +479,7 @@ class Fleet:
         """
 
         # init controller
-        controller=VehicleController([car.ID for car in self.cars], self.FREQUENCY)
+        controller=VehicleController([car.ID for car in self.cars],self.FREQUENCY)
 
         # connect control signal
         controller.control.connect(self.control_car)

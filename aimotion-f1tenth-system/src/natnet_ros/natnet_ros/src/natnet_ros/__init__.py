@@ -57,10 +57,11 @@ def validate_name(name):
 
 class NatnetClientNode(object):
 
-    def __init__(self, car_id=None):
+    def __init__(self, car_id=None, server=""):
         self.log=RosLogger()
 
         self.car_id=car_id
+        self.server=server
 
         # {rigid body id: rigid body pose publisher}
         self.rigid_body_pubs = {}  # type: dict[int, rospy.Publisher]
@@ -325,8 +326,7 @@ class NatnetClientNode(object):
             client = self.fake_connect(use_v2=True)
         else:
         """
-        server = rospy.get_param('~server', None)
-        client = natnet.Client.connect(server, logger=self.log)
+        client = natnet.Client.connect(self.server, logger=self.log)
         if self.car_id is not None:
             # stream only one RigidBody position
             client.set_model_callback(self.model_definitions_callback_RigidBody)

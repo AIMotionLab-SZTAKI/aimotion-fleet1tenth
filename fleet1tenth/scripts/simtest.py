@@ -4,7 +4,19 @@ import time
 from scipy.interpolate import splrep, splprep, splev
 import numpy as np
 
+def _normalize(angle):
+    """
+    Normalizes the given angle into the [-pi/2, pi/2] range
 
+    Arguments:
+        - angle(float): The angle to normalize, in radian
+    """
+    while angle > np.pi:
+        angle -= 2*np.pi
+    while angle < -np.pi:
+        angle += 2*np.pi
+
+    return angle
 fleet1tenth=Fleet1tenth(config_file_path=None)
 
 fleet1tenth.fleet.init_cars("AI_car_01")
@@ -50,6 +62,25 @@ class Path:
         plt.plot(x,y)
         plt.show()
 
+    def get_starting_data(self):
+        # position & derivatives
+        s=0
+        (x, y) = splev(s, self.tck)
+        (x_, y_) = splev(s, self.tck, der=1)
+        (x__,y__)=splev(s, self.tck,der=2)
+        
+        # calculate base vectors of the moving coordinate frame
+        s0 = np.array(
+            [x_ / np.sqrt(x_**2 + y_**2), y_ / np.sqrt(x_**2 + y_**2)]
+        )
+        z0 = np.array(
+            [-y_ / np.sqrt(x_**2 + y_**2), x_ / np.sqrt(x_**2 + y_**2)]
+        )
+        theta_p=np.arctan2(s0[1],s0[0])
+        return x,y,theta_p
+
+    
+
 
 path=Path(np.array(
     [
@@ -72,11 +103,66 @@ path=Path(np.array(
         [-0.88, 0.88],
         [-0.48, 1.15],
         [0, 1.25],
+        [0.48,1.15],
+        [0.88, 0.88],
+        [1.15, 0.48],
+        [1.25, 0],
+        [1.15, -0.48],
+        [0.88, -0.88],
+        [0.48, -1.15],
+        [0, -1.25],
+        [-0.48, -1.15],
+        [-0.88, -0.88],
+        [-1.15, -0.48],
+        [-1.25, -0],
+        [-1.15, 0.48],
+        [-0.88, 0.88],
+        [-0.48, 1.15],
+        [0, 1.25],
+        [0.48,1.15],
+        [0.88, 0.88],
+        [1.15, 0.48],
+        [1.25, 0],
+        [1.15, -0.48],
+        [0.88, -0.88],
+        [0.48, -1.15],
+        [0, -1.25],
+        [-0.48, -1.15],
+        [-0.88, -0.88],
+        [-1.15, -0.48],
+        [-1.25, -0],
+        [-1.15, 0.48],
+        [-0.88, 0.88],
+        [-0.48, 1.15],
+        [0, 1.25],
+        [0.48,1.15],
+        [0.88, 0.88],
+        [1.15, 0.48],
+        [1.25, 0],
+        [1.15, -0.48],
+        [0.88, -0.88],
+        [0.48, -1.15],
+        [0, -1.25],
+        [-0.2, -1.15],
+        [-0.88, -0.88],
+        [-1.15, -0.48],
+        [-1.0, -0],
+        [-1.10, 0.48],
+        [-0.88, 0.9],
+        [-0.48, 1.2],
+        [0, 1],
     ]
-), 1
+), 0.9
 )
+
+x,y,theta_p=path.get_starting_data()
+print(f"Starting position: {x},  {y},  {theta_p}")
 
 path.plot_traj()
 
-
+c1.init_logger("drive_logs/motion", gui=False)
+c1.start_logging()
 res=c1.execute_trajectory(path.tck, path.speed_tck, (0,path.length))
+c1.stop_logging()
+if not res:
+    print("FAIL")

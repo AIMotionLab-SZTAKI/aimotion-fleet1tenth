@@ -4,26 +4,20 @@
   <env name="ROSLAUNCH_SSH_UNKNOWN" value="1" />
 
   <!-- Arguments -->
-  <arg name="optitrack_ip" default="192.168.1.141" />
-  <arg name="update_frequency" default="1.0" />
-  <arg name="angle_gain" default="1" />
-  <arg name="angle_offset" default="0.5" />
-  <arg name="tracker_offset" default="0" />
   <arg name="car_id" default="RC_car_01" />
   <arg name="machine_ip" default="192.168.1.49" />
   <arg name="username" default="nvidia-car01" />
   <arg name="password" default="123456" />
+  <arg name="motion_capture" default="onboard_optitrack" />
 
   <!-- Launch file on remote machine -->
   <machine name="$(arg car_id)_machine" address="$(arg machine_ip)" user="$(arg username)" password="$(arg password)" env-loader="/home/$(arg username)/aimotion-f1tenth-system/env.sh" />
   <group ns="$(arg car_id)">
+  <param name="car_id" value="$(arg car_id)" />
 
 
    <!-- Lauch bridge -->
-   <node name="drive_bridge" pkg="drive_bridge" type="drive_bridge_node.py" output="screen" machine="$(arg car_id)_machine">
-  	<param name="angle_gain" value="$(arg angle_gain)" />
-      	<param name="angle_offset" value="$(arg angle_offset)" />
-    </node>
+   <node name="drive_bridge" pkg="drive_bridge" type="drive_bridge_node.py" output="screen" machine="$(arg car_id)_machine"/>
 
    <!-- Launch VESC hardware interface -->
    <node name="vesc_driver_node" pkg="vesc_driver" type="vesc_driver_node" output="screen" machine="$(arg car_id)_machine">
@@ -33,23 +27,15 @@
 
   
   <!-- Launch Natet ROS interface node -->
-  <node pkg="natnet_ros" type="client.py" name="aimotion_mocap_node" output="screen" machine="$(arg car_id)_machine">
-   <param name="server" value="$(arg optitrack_ip)" />
-   <param name="car_id" value="$(arg car_id)" />
+  <node pkg="natnet_ros" type="client.py" name="aimotion_mocap_node" output="screen" machine="$(arg car_id)_machine" if="$(eval arg('motion_capture') == 'onboard_optitrack')">
  </node>
 
  <!-- Launch path following controller node -->
-  <node pkg="control" type="control_node.py" name="control_node" output="screen" machine="$(arg car_id)_machine">
-      <param name="car_ID" value="$(arg car_id)" />
-      <param name="FREQUENCY" value="$(arg update_frequency)" />
+  <node pkg="control" type="control_node.py" name="path_following_control_node" output="screen" machine="$(arg car_id)_machine">
   </node>
 
   <!-- Launch State observer node -->
   <node name="state_observer_node" pkg="vehicle_state_observer" type="optitrack_state_observer_node.py" output="screen" machine="$(arg car_id)_machine">
-     <param name="frequency" value="$(arg update_frequency)" />
-     <param name="tracker_offset" value="$(arg tracker_offset)" />
   </node>
   </group>
 </launch>
-
-

@@ -216,15 +216,21 @@ if __name__ == '__main__':
         rospy.init_node('state_observer_node', anonymous=True)
 
         # Get ROS parames
-        l_offs=rospy.get_param("~tracker_offset", 0.2225) # distance of tracked RigidBody from CoM
-        frequency=rospy.get_param("~frequency", 20.0)
+        l_offs=rospy.get_param("~tracker_offset", 0.2) # distance of tracked RigidBody from CoM
+        frequency=rospy.get_param("/AIMotionLab/FREQUENCY", 40.0)
         cutoff=rospy.get_param("~cutoff", 2)
+        
+        try:
+            pose_topic=rospy.get_param("~mocap_external_topic")
+        except KeyError:
+            pose_topic="aimotion_mocap_node/pose"
 
+
+        # init estimator
         estimator=Estimator(l_offs=l_offs, filter_window=10, frequency=frequency, cutoff=cutoff)
         
         # init subscribers
-        rospy.Subscriber("aimotion_mocap_node/pose", PoseStamped, estimator.process)
-
+        rospy.Subscriber(pose_topic, PoseStamped, estimator.process)
         rospy.Subscriber("sensors/core", VescStateStamped, estimator.setData)
         rospy.Subscriber("sensors/servo_position_command", Float64, estimator.setDelta)
 

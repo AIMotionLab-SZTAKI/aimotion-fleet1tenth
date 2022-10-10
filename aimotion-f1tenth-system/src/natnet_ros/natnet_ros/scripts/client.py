@@ -18,7 +18,7 @@ from natnet_ros import NatnetClientNode
 if __name__ == '__main__':
     rospy.init_node('aimotion_mocap_node', disable_signals=True, anonymous=True)
     try:
-        node = NatnetClientNode(rospy.get_param("~car_id", None))
+        node = NatnetClientNode(rospy.get_param("car_id", None), rospy.get_param("/AIMotionLab/mocap_server"))
         node.run()
     finally:
         rospy.signal_shutdown(reason='Finished')

@@ -47,18 +47,21 @@ class Car:
         print("This function is not implemented in simulation mode!")
 
 
-    def launch_system(self, FREQUENCY):
+    def launch_system(self):
         """
         Launches communication, control and driver nodes onboard the F1/10 vehicle
         
         """
+        # set ROS parameters
+        rospy.set_param("/"+self.ID+"/path_following_control_node/lateral_gains", self.LATERAL_CONTROL_GAINS)
+        rospy.set_param("/"+self.ID+"/path_following_control_node/longitudinal_gains", self.LONGITUDINAL_CONTROL_GAINS)
 
         # Configure logging
         uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
         # setup CLI arguments TODO: modify for simulation
-        cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulated_vehicle.launch',f'car_id:={self.ID}',f'frequency:={FREQUENCY}']
+        cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulated_vehicle.launch',f'car_id:={self.ID}']
         roslaunch_args=cli_args[1:]
         roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
 
@@ -184,16 +187,16 @@ class Fleet:
         
         """
         if config_file is not None:
-            self.config_file=config_file # in simulation needed for the launch of the simulator node
+            config_file=config_file # in simulation needed for the launch of the simulator node
         else:
-            self.config_file=str(Path(__file__).parents[2])+"/config/simulation.yaml"
+            config_file=str(Path(__file__).parents[2])+"/config/simulation.yaml"
 
         self.simulation_launch=None
 
         try:
-            with open(self.config_file, "r") as f:
+            with open(config_file, "r") as f:
                 try:
-                    config_data=yaml.safe_load(f)
+                    self.config_data=yaml.safe_load(f)
                 except yaml.YAMLError as e:
                     print("Cannot load the YAML configuration file!")
                     return
@@ -203,14 +206,17 @@ class Fleet:
 
 
         # ROS environment variables
-        environ["ROS_MASTER_URI"]=config_data["ROS_MASTER_URI"]
-        environ["ROS_IP"]=config_data["ROS_IP"] 
+        environ["ROS_MASTER_URI"]=self.config_data["ROS_MASTER_URI"]
+        environ["ROS_IP"]=self.config_data["ROS_IP"] 
 
         # System frequency for the controllers, state observers...
-        self.FREQUENCY=config_data["FREQUENCY"]
+        self.FREQUENCY=self.config_data["FREQUENCY"]
+        rospy.set_param("/AIMotionLab/FREQUENCY", self.FREQUENCY)
+
+
 
         # Load vehicle config data
-        self.vehicle_data=config_data["vehicles"]
+        self.vehicle_data=self.config_data["vehicles"]
 
         # init list to store Car objects
         self.cars=[]
@@ -295,10 +301,9 @@ class Fleet:
         if IDs is None: # start all cars
             for car in self.cars:
                 try:
-                    car.launch_system(self.FREQUENCY)
+                    car.launch_system()
                     #car.check_steering()
                 except Exception as e:
-                    print(e)
                     print(f"Unable establish connection to {car.ID}, deleting interface...")
                     failed.append(car)
     
@@ -306,7 +311,7 @@ class Fleet:
             for car in self.cars:
                 if car.ID in IDs:
                     try:
-                        car.launch_system(self.FREQUENCY)
+                        car.launch_system()
                         # car.check_steering() unnecessary for simulation
                     except Exception as e:
                         print(e)
@@ -326,9 +331,16 @@ class Fleet:
             roslaunch.configure_logging(uuid)
 
             # setup CLI arguments
-            cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulator.launch', f'simulation_yaml_path={self.config_file}', f'launched_vehicles={[c.ID for c in self.cars]}']
+            cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulator.launch']
             roslaunch_args=cli_args[1:]
             roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
+
+            # set ROS params for the simulator
+            rospy.set_param("/SIMULATOR/simulator_node/SOLVER", self.config_data["SOLVER"])
+            rospy.set_param("/SIMULATOR/simulator_node/default_vehicle_model", self.config_data["default_vehicle_model"])
+            rospy.set_param("/SIMULATOR/simulator_node/vehicles", self.config_data["vehicles"])
+            rospy.set_param("/SIMULATOR/simulator_node/launched_vehicles", [c.ID for c in self. cars])
+
 
             # Launch
             try:

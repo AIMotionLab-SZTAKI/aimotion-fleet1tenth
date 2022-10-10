@@ -10,9 +10,9 @@ import math
 import rospy
 import time
 from os.path import expanduser
-
+import time
 class CombinedController(BaseController):
-    def __init__(self, FREQUENCY, projection_window, projection_step):
+    def __init__(self, FREQUENCY, lateral_gains,longitudinal_gains,projection_window, projection_step, look_ahead=0):
         """
         Implementation of the path tracking control algorithm:
                 -> Lateral control: Upgraded Stanley method using lateral error dynamics
@@ -27,8 +27,20 @@ class CombinedController(BaseController):
         # Lateral dynamics integral term
         self.q=0
 
+        # look ahead distance for evaluation
+        self.look_ahead=look_ahead
+
+        # feedback gain polynomials
+        self.k_lat1=np.poly1d(lateral_gains["k1"])
+        self.k_lat2=np.poly1d(lateral_gains["k2"])
+        self.k_lat3=np.poly1d(lateral_gains["k3"])
+
+        self.k_long1=np.poly1d(longitudinal_gains["k1"])
+        self.k_long2=np.poly1d(longitudinal_gains["k2"])
+
+
         self.logfile=open(expanduser("~")+"/car1.csv", "w")
-        self.logfile.write(f"t,x,y,fi,vxi,veta,omega,d,delta,z,theta_e\n")
+        self.logfile.write("t,x,y,fi,vxi,veta,omega,d,delta,z,theta_e\n")
 
 
 
@@ -43,8 +55,8 @@ class CombinedController(BaseController):
 
         ### PROCESS STATE DATA ###
         # get the current position
-        position=np.array([data.position_x, data.position_y])
-        phi=data.heading_angle
+        position=np.array([data.position_x+self.look_ahead*np.cos(data.heading_angle), data.position_y+self.look_ahead*np.sin(data.heading_angle)])
+        phi=_normalize(data.heading_angle)
 
         # get velocity data
         v_xi=data.velocity_x
@@ -106,7 +118,7 @@ class CombinedController(BaseController):
         k_long1,k_long2=self.get_longitudinal_feedback_gains(p)
         d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
 
-        
+        d=0.1
 
         ### PUBLISH INPUTS ###
         msg=InputValues()
@@ -118,31 +130,21 @@ class CombinedController(BaseController):
         ### step reference parameter
         self.s_ref+=v_ref*self.dt
 
-        self.logfile.write(f"t,{position[0]},{position[1]},{phi},{v_xi},{v_eta},omega,,{delta},{z1},{theta_e}\n")
+        # self.logfile.write(f"{data.header.stamp.to_sec()},{position[0]},{position[1]},{phi},{v_xi},{v_eta},omega,,{delta},{z1},{theta_e}\n")
+        self.logfile.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n".format(rospy.Time.now().to_sec(),position[0],position[1],phi,v_xi,v_eta,data.omega,delta,z1,theta_e)) # Python 2.7 compatible
+        #data.header.stamp.to_sec()
 
     def get_lateral_feedback_gains(self, v_xi):
         if v_xi>0:
-            k1=-0.0387*v_xi**3+0.2249*v_xi**2-0.4541*v_xi+0.5137
-            k2=-0.8997*v_xi**3+5.2284*v_xi**2-10.5470*v_xi+11.8980
-            k3=+0.1246*v_xi**3-0.7735*v_xi**2+1.7601*v_xi+0.6148
+            k1=self.k_lat1(v_xi)
+            k2=self.k_lat2(v_xi)
+            k3=self.k_lat3(v_xi)
             return k1,k2,k3
         else:
             return 0,0,0
 
 
     def get_longitudinal_feedback_gains(self,p):
-        k1=-0.0185*p+0.5
-        k2=+0.0118*p+0.5
+        k1=self.k_long1(p)
+        k2=self.k_long2(p)
         return k1, k2
-
-
-
-
-
-
-
-
-
-        
-        
-        

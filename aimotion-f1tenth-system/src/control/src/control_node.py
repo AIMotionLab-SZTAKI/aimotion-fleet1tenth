@@ -76,8 +76,20 @@ path=Path(np.array(
 
 if __name__=="__main__":
     try:
-        rospy.init_node("aimotion_control_node", anonymous=True)
-        controller=CombinedController(FREQUENCY=float(rospy.get_param("~FREQUENCY", 20)),projection_window=3, projection_step=0.01)
+        rospy.init_node("path_following_control_node", anonymous=True)
+        
+        # get ROS params
+        freq=float(rospy.get_param("/AIMotionLab/FREQUENCY", 40.0))
+        lat_gains=rospy.get_param("~lateral_gains", 
+                                    {"k1":[-0.0006,0.0051,-0.0170,0.1215],
+                                     "k2": [-0.0494,0.3184,-0.7847,3.2132],
+                                     "k3": [0.0350,-0.3029,1.0589,-0.1582]}) # default values 
+
+        long_gains=rospy.get_param("~longitudinal_gains", {"k1":1, "k2": 2})
+
+        # init controller
+        controller=CombinedController(FREQUENCY=freq,projection_window=1, lateral_gains=lat_gains,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.1)
+        
         # controller.speed_tck=
         # controller.trajectory_tck=path.tck
         # controller.s=0
@@ -85,6 +97,8 @@ if __name__=="__main__":
         # controller.s_start=0
         # controller.s_end=path.length
         # controller.enabled=False
+
+        # shutdown hook & spin
         rospy.on_shutdown(controller.shutdown)
         controller.spin()
     except rospy.ROSInterruptException:

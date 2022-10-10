@@ -10,7 +10,7 @@ import numpy as np
 from control.msg import trajectoryAction, trajectoryFeedback, trajectoryResult
 import actionlib
 
-class BaseController:
+class BaseController(object):
     def __init__(self,FREQUENCY):
         """
         Base class for the implementation of path following controllers
@@ -60,6 +60,23 @@ class BaseController:
         self.s_start=trajectory_data.s_start
         self.s_end=trajectory_data.s_end
         self.s_ref=self.s_start
+
+
+        # check if the trajectory starts at current position
+        pos, s0, z0, v, c=self.get_path_data(self.s_start)
+        current_state=rospy.wait_for_message("state",VehicleStateStamped)
+        current_pos=np.array([current_state.position_x,current_state.position_y])
+        theta_p=np.arctan2(s0[1], s0[0])
+
+        if abs(np.dot(current_pos-pos, z0))>0.2 or abs(theta_p-_normalize(current_state.heading_angle))>0.3:
+            #rospy.logerr(f"current_pos: {current_pos[0]}, {current_pos[1]}")
+            #rospy.logerr(f"ref_pos: {pos[0]}, {pos[1]}")
+            #rospy.logerr(f"heading: {current_state.heading_angle}")
+            #rospy.logerr(f"ref heading: {theta_p}")
+            #rospy.logerr(f"{abs(np.dot(current_pos-pos, z0))},  {abs(theta_p-_normalize(current_state.heading_angle))}")
+            self.action_result.success=False
+            self.trajectory_server.set_succeeded(self.action_result)
+            return # TOO much deviation from starting point
 
         # enable state callbacks that trigger the control
         self.enabled=True
