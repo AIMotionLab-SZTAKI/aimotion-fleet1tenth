@@ -18,7 +18,7 @@ from control.msg import trajectoryAction, trajectoryGoal
 
 class Car:
 
-    def __init__(self,ID, *args):
+    def __init__(self,ID, PARAMS_DICT):
         """
         Class interface for the communication and control of one SIMULATED F1/10 vehicle
         
@@ -31,6 +31,11 @@ class Car:
         
         # for identification
         self.ID=ID
+
+        
+        # control params
+        self.LATERAL_CONTROL_GAINS=PARAMS_DICT["control"]["LATERAL_CONTROL_GAINS"]
+        self.LONGITUDINAL_CONTROL_GAINS=PARAMS_DICT["control"]["LONGITUDINAL_CONTROL_GAINS"]
 
 
         self.running=False # might be unused (TODO)
@@ -255,12 +260,12 @@ class Fleet:
         self.drop_cars()
         if IDs is not None:
             if isinstance(IDs, str):
-                c=Car(IDs, self.vehicle_data[IDs])
+                c=Car(IDs, PARAMS_DICT=self.vehicle_data[IDs])
                 print(f"Vehicle control interface initialized for {c.ID}")
                 self.cars.append(c)
             elif isinstance(IDs, list) or isinstance(IDs, tuple):
                 for id in IDs:
-                    c=Car(id, self.vehicle_data[id])
+                    c=Car(id, self.vehicle_data[id],PARAMS_DICT=self.vehicle_data[id])
                     print(f"Vehicle control interface initialized for {c.ID}")
                     self.cars.append(c)
             else:
@@ -269,7 +274,7 @@ class Fleet:
         else:
             chosen=self.choose_cars()
             for id in chosen:
-                c=Car(id, self.vehicle_data[id])
+                c=Car(id,  PARAMS_DICT=self.vehicle_data[id])
                 print(f"Vehicle control interface initialized for {c.ID}")
                 self.cars.append(c)
 

@@ -56,8 +56,8 @@ class Path:
 
         speed_vect=const_speed*np.ones(len(self.u))
         for i in range(50):
-            speed_vect[i]=0.4+const_speed*i/100
-            speed_vect[-i-1]=0.4+const_speed*i/100
+            speed_vect[i]=np.sign(const_speed)*0.4+(const_speed-np.sign(const_speed)*0.4)*i/50
+            speed_vect[-i-1]=np.sign(const_speed)*0.4+-(const_speed-np.sign(const_speed))*(i-1)/200
         speed_vect[-1]=0
         self.speed_tck=splrep(self.u,speed_vect)
     
@@ -152,7 +152,7 @@ path=Path(np.array(
         [-0.5, -0.75],
         [0, 0],
     ]
-), 1
+), 0.5
 )
 
 x,y,theta_p=path.get_starting_data()
@@ -160,6 +160,9 @@ print(f"Starting position: {x},  {y},  {theta_p}")
 
 path.plot_traj()
 
+c1.init_logger("drive_logs/motion", gui=False)
+c1.start_logging()
 res=c1.execute_trajectory(path.tck, path.speed_tck, (0,path.length))
+c1.stop_logging()
 if not res:
     print("FAIL")

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from os import environ
-from gevent import config
 import yaml
 import rospy
 from drive_bridge_msg.msg import InputValues

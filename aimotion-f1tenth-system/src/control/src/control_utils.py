@@ -67,13 +67,19 @@ class BaseController(object):
         current_state=rospy.wait_for_message("state",VehicleStateStamped)
         current_pos=np.array([current_state.position_x,current_state.position_y])
         theta_p=np.arctan2(s0[1], s0[0])
+        
+        # if reversing motion is required invert heading
+        if v<0:
+            current_heading=current_state.heading_angle+np.pi
+        else:
+            current_heading=current_state.heading_angle
 
-        if abs(np.dot(current_pos-pos, z0))>0.2 or abs(theta_p-_normalize(current_state.heading_angle))>0.3:
-            #rospy.logerr(f"current_pos: {current_pos[0]}, {current_pos[1]}")
-            #rospy.logerr(f"ref_pos: {pos[0]}, {pos[1]}")
-            #rospy.logerr(f"heading: {current_state.heading_angle}")
-            #rospy.logerr(f"ref heading: {theta_p}")
-            #rospy.logerr(f"{abs(np.dot(current_pos-pos, z0))},  {abs(theta_p-_normalize(current_state.heading_angle))}")
+        if abs(np.dot(current_pos-pos, z0))>0.5 or abs(_normalize(theta_p-_normalize(current_heading)))>0.5:
+            rospy.logerr("current_pos: {0}, {1}".format(current_pos[0],current_pos[1]))
+            rospy.logerr("ref_pos: {0}, {1}".format(pos[0],pos[1]))
+            rospy.logerr("heading: {0}".format(current_heading))
+            rospy.logerr("ref heading: {0}".format(theta_p))
+            rospy.logerr("lat_error: {0},  heading_error: {1}".format(abs(np.dot(current_pos-pos, z0)),abs(_normalize(theta_p-_normalize(current_heading)))))
             self.action_result.success=False
             self.trajectory_server.set_succeeded(self.action_result)
             return # TOO much deviation from starting point
@@ -128,6 +134,9 @@ class BaseController(object):
         v = splev(s, self.speed_tck)
 
         return np.array([x, y]), s0, z0, v, c
+
+    def get_path_speed(self,s):
+        return splev(s, self.speed_tck)
 
     def shutdown(self):
         """Stops the execution"""

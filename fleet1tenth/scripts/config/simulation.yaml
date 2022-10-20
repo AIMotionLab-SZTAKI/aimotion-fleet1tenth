@@ -8,12 +8,26 @@ ROS_IP: 192.168.1.13
 SOLVER: "RK45" # ODE solver
 
 # system frequency
-FREQUENCY: 36.9
+FREQUENCY: 40.0
 
 # dynamic single track vehicle model parameters
 vehicles:
   AI_car_01:
-    init_pose: [-1.5954, 1.4649,-0.88] # [ x[m], y[m], phi[rad] ]
+    init_pose: [1.8, -0.2,-3]
+    #[-1.5800985436735742,  1.5166405007096615,  -0.5931982357423143]
+  #  # [ x[m], y[m], phi[rad] ]
+
+    control:
+      LATERAL_CONTROL_GAINS: # TODO: add details on the control algorithms
+        k1: [-0.0000,0.0002,-0.0013,0.0225]
+        k2: [-0.0089,0.0691,-0.2403,0.8267]
+        k3: [0.0026,-0.0667,0.4328,-0.0604]
+        #k1: [-0.0006,0.0051,-0.0170,0.1215]
+        #k2: [-0.0494,0.3184,-0.7847,3.2132]
+        #k3: [0.0350,-0.3029,1.0589,-0.1582]
+      LONGITUDINAL_CONTROL_GAINS:
+        k1: [0.0001,-0.0014,0.0908]
+        k2: [-0.0025,0.0298,0.0095]
     # Specify custom model parameters here!
     # If no custom paramters are provided the default_vehicle_model will be used!
     #m:

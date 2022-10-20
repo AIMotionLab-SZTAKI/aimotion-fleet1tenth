@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from threading import Thread
+from attr import asdict
 import numpy as np
 import rospy
 import time
@@ -193,11 +194,18 @@ class SimulatedCar:
         F_xi=self.C_m1*d-self.C_m2*v_xi-np.sign(v_xi)*self.C_m3
 
         # obtain lateral tire forces
-        if abs(v_xi)>0.5:# only use tire model for moving vehicles
-            alpha_f=-(omega*self.l_f+v_eta)/v_xi+delta
-            alpha_r=(omega*self.l_r-v_eta)/v_xi
+        if abs(v_xi)>0.4:# only use tire model for moving vehicles
+            alpha_f=-(omega*self.l_f+v_eta)/abs(v_xi)+delta
+            alpha_r=(omega*self.l_r-v_eta)/abs(v_xi)
+                
             F_f_eta=self.C_f*alpha_f
             F_r_eta=self.C_r*alpha_r
+            
+                #alpha_f=(v_eta+omega*self.l_f)/abs(v_xi)-delta
+                #alpha_r=(v_eta-omega*self.l_r)/abs(v_xi)
+
+                #F_f_eta=self.C_f*alpha_f
+                #F_r_eta=self.C_r*alpha_r
         else:
             F_f_eta=0
             F_r_eta=0
@@ -246,6 +254,7 @@ class Simulator:
 
         self.started=False # remains False until the simulator recieves control input
         self.timer=0
+        self.cb_timer=0
 
         self.cars=[]
         self.subs=[]
@@ -281,22 +290,20 @@ class Simulator:
         print(f"Simulation environment initialized for: {[c.ID for c in self.cars]}")
     
 
-    def begin_publishing(self):
+    def spin(self):
         """
         Function that publishes the initial
         """
-        # publish the initial position until control input is not recieved
-        publisher_thread=Thread(target=self.publish_initial)
-        publisher_thread.start()
         
         # after the simulation has started spin to prevent exiting
-        rospy.spin()
+        while not rospy.is_shutdown():
+            time.sleep(0.1)
+            self.cb_timer+=1
+            if self.cb_timer>=10:
+                for c in self.cars:
+                    c.publish_state()
+                self.cb_timer=0
 
-    def publish_initial(self):
-        while not self.started:
-            for c in self.cars:
-                c.publish_state()
-            time.sleep(1)
 
 
     
@@ -338,6 +345,8 @@ class Simulator:
                 for c in self.cars:# another for loop to reduce delay between the published messages
                     c.publish_state()
                 self.reset_input_matrix()
+            
+        self.cb_timer=0
 
 
 
@@ -371,6 +380,6 @@ if __name__=="__main__":
                             default_model=rospy.get_param("~default_vehicle_model"),
                             launched_vehicles=rospy.get_param("~launched_vehicles", "None"))
         rospy.on_shutdown(simulator.shutdown)
-        simulator.begin_publishing()
+        simulator.spin()
     except rospy.ROSInterruptException:
         pass
