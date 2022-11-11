@@ -275,7 +275,7 @@ class Car:
             print(f"{self.ID} executed the uploaded trajectory successfully!")
         else:
             print(f"{self.ID} failed to execute the uploaded trajectory!")
-        return result
+        return result.success
 
 
 

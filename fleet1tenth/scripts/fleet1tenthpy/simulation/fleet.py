@@ -13,6 +13,8 @@ from ..logging import StateLogger
 from ..install_utils import create_clients, create_environment
 import actionlib
 from control.msg import trajectoryAction, trajectoryGoal
+from .manager import PlaybackManager
+import atexit
 # import pygame
 
 
@@ -229,6 +231,9 @@ class Fleet:
         # init GUI manager
         self.GUIManager=GUIManager()
 
+
+        self.playback_manager=None
+
         # initialize ROS node
         try:
             # check if master is running
@@ -290,7 +295,35 @@ class Fleet:
             del car
         self.cars=[]
 
+    def launch_simulator(self):
+        """Launches the simulator node of the system"""
+        # launch the simulator node if its not already running
+        # Configure logging
+        uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
 
+        # setup CLI arguments
+        cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulator.launch']
+        roslaunch_args=cli_args[1:]
+        roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
+
+        # set ROS params for the simulator
+        rospy.set_param("/SIMULATOR/simulator_node/SOLVER", self.config_data["SOLVER"])
+        rospy.set_param("/SIMULATOR/simulator_node/default_vehicle_model", self.config_data["default_vehicle_model"])
+        rospy.set_param("/SIMULATOR/simulator_node/vehicles", self.config_data["vehicles"])
+        rospy.set_param("/SIMULATOR/simulator_node/launched_vehicles", [c.ID for c in self.cars])
+
+
+        # Launch
+        try:
+            self.simulation_launch=roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
+            self.simulation_launch.start()
+        except RLException:
+            raise Exception()
+
+        self.playback_manager=PlaybackManager([c.ID for c in self.cars])
+
+        
 
     def launch_cars(self, IDs=None):
         """
@@ -300,6 +333,7 @@ class Fleet:
             - IDs(list/str): ID list to specitfy which to start
                    If not provided connect to all cars specified in config_file
         """
+
         # create a list of failed interfaces to delete later
         failed=[]
 
@@ -329,32 +363,15 @@ class Fleet:
             del fail
 
         #### SIMULATION ONLY ####
-        # launch the simulator node if its not already running
+
         if self.simulation_launch is None:
-            # Configure logging
-            uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
-            roslaunch.configure_logging(uuid)
-
-            # setup CLI arguments
-            cli_args=[str(Path(__file__).parents[3])+'/src/start/launch/simulator.launch']
-            roslaunch_args=cli_args[1:]
-            roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
-
-            # set ROS params for the simulator
-            rospy.set_param("/SIMULATOR/simulator_node/SOLVER", self.config_data["SOLVER"])
-            rospy.set_param("/SIMULATOR/simulator_node/default_vehicle_model", self.config_data["default_vehicle_model"])
-            rospy.set_param("/SIMULATOR/simulator_node/vehicles", self.config_data["vehicles"])
-            rospy.set_param("/SIMULATOR/simulator_node/launched_vehicles", [c.ID for c in self. cars])
-
-
-            # Launch
-            try:
-                self.simulation_launch=roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
-                self.simulation_launch.start()
-            except RLException:
-                raise Exception()
+            self.launch_simulator()
 
         time.sleep(2) # sleep to enable node startup before processing further
+
+
+    def open_playback(self):
+        self.playback_manager.show_gui()
 
 
     def shutdown_cars(self, ID=None):

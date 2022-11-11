@@ -1,8 +1,8 @@
 import rospy
 from vehicle_state_msgs.msg import VehicleStateStamped
-from .visualization import SimulatorVisualization
-
-class SimulationManager:
+from .visualization import Visualization
+import atexit
+class PlaybackManager:
     def __init__(self, car_IDs):
         """
         Class responsible for the management of the simulation
@@ -19,7 +19,14 @@ class SimulationManager:
             l=CarLogs(ID)
             self.car_logs.append(l)
 
-        self.gui=SimulatorVisualization()
+        self.gui=Visualization(self.car_IDs)
+
+        # execute gui at the end of the script
+        atexit.register(self.show_gui)
+
+    def show_gui(self):
+        self.gui.show()
+
 
 
 class CarLogs:
@@ -59,7 +66,7 @@ class CarLogs:
         self.y.append(data.position_y)
         self.phi.append(data.heading_angle)
         self.v_xi.append(data.velocity_x)
-        self.v_eta.append(data.veocity_y)
+        self.v_eta.append(data.velocity_y)
         self.omega.append(data.omega)
         self.d.append(data.duty_cycle)
         self.delta.append(data.delta)

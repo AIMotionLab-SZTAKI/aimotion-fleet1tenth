@@ -152,7 +152,7 @@ path=Path(np.array(
         [-0.5, -0.75],
         [0, 0],
     ]
-), 1
+), 1.2
 )
 
 x,y,theta_p=path.get_starting_data()

@@ -13,8 +13,7 @@ FREQUENCY: 40.0
 # dynamic single track vehicle model parameters
 vehicles:
   AI_car_01:
-    init_pose: [1.8, -0.2,-3]
-    #[-1.5800985436735742,  1.5166405007096615,  -0.5931982357423143]
+    init_pose: [-1.5800985436735742,  1.5166405007096615,  2.54]  #-0.5931982357423143] # [1.8, -0.2,-3]
   #  # [ x[m], y[m], phi[rad] ]
 
     control:

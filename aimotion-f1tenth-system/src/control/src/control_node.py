@@ -82,10 +82,10 @@ if __name__=="__main__":
         freq=float(rospy.get_param("/AIMotionLab/FREQUENCY", 40.0))
         lat_gains=rospy.get_param("~lateral_gains")
         long_gains=rospy.get_param("~longitudinal_gains")
-        
+        lat_gains_reverse={"k1":[-0.0008,0.0442, -1.2247],"k2":[-0.0002,0.0191,-0.9531]} # TODO: move to ROS param server
 
         # init controller
-        controller=CombinedController(FREQUENCY=freq,projection_window=3, lateral_gains=lat_gains,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.1)
+        controller=CombinedController(FREQUENCY=freq,projection_window=3, lateral_gains=lat_gains,lateral_gains_reverse=lat_gains_reverse,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.2)
         
         # controller.speed_tck=
         # controller.trajectory_tck=path.tck

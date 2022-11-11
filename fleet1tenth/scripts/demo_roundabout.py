@@ -65,7 +65,7 @@ class Path:
         plt.plot(x,y)
         plt.plot(self.x_points,self.y_points, "bo")
         plt.grid()
-        #plt.plot(self.u,v)
+        plt.plot(self.u,v)
         plt.show()
 
     def get_starting_data(self):
@@ -121,7 +121,7 @@ for i in range(rounds):
 all_path[-1,:]=end_p
 all_path[-2,:]=np.array([end_p[0]-0.2, end_p[1]])
 
-path=Path(all_path,const_speed=-0.75
+path=Path(all_path,const_speed=0.7
 )
 
 x,y,theta_p=path.get_starting_data()

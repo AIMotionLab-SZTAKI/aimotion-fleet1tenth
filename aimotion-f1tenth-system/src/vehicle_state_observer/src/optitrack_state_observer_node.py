@@ -216,7 +216,7 @@ if __name__ == '__main__':
         rospy.init_node('state_observer_node', anonymous=True)
 
         # Get ROS parames
-        l_offs=rospy.get_param("~tracker_offset", 0.2) # distance of tracked RigidBody from CoM
+        l_offs=rospy.get_param("~tracker_offset") # distance of tracked RigidBody from CoM
         frequency=rospy.get_param("/AIMotionLab/FREQUENCY", 40.0)
         cutoff=rospy.get_param("~cutoff", 2)
         

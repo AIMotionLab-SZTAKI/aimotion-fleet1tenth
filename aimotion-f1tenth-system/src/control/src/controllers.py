@@ -2,6 +2,8 @@
 
 # Developed in Python 2.7
 
+from ipaddress import v4_int_to_packed
+from ssl import VERIFY_X509_TRUSTED_FIRST
 import numpy as np
 from control_utils import BaseController, project_to_closest, _normalize, _clamp
 from vehicle_state_msgs.msg import VehicleStateStamped
@@ -14,7 +16,7 @@ import time
 
 
 class CombinedController(BaseController):
-    def __init__(self, FREQUENCY, lateral_gains, longitudinal_gains, projection_window, projection_step, look_ahead=0):
+    def __init__(self, FREQUENCY, lateral_gains, lateral_gains_reverse, longitudinal_gains, projection_window, projection_step, look_ahead=0):
         """
         Implementation of the path tracking control algorithm:
                 -> Lateral control: Upgraded Stanley method using lateral error dynamics
@@ -38,14 +40,25 @@ class CombinedController(BaseController):
         self.k_lat2=np.poly1d(lateral_gains["k2"])
         self.k_lat3=np.poly1d(lateral_gains["k3"])
 
+        
+        self.k_lat1_r=np.poly1d(lateral_gains_reverse["k1"])
+        self.k_lat2_r=np.poly1d(lateral_gains_reverse["k2"])
+        #self.k_lat1_r=np.poly1d([-0.0008,0.0442, -1.2247])
+        #self.k_lat2_r=np.poly1d([-0.0002,0.0191,-0.9531])
+
         self.k_long1=np.poly1d(longitudinal_gains["k1"])
         self.k_long2=np.poly1d(longitudinal_gains["k2"])
 
 
         self.logfile=open(expanduser("~")+"/car1.csv", "w")
         self.logfile.write(str(longitudinal_gains["k1"])+"\n")
-        self.logfile.write("t,x,y,fi,vxi,veta,omega,d,delta,z,theta_e,s_err,v_err\n")
+        
+        self.logfile.write("t,x,y,phi,v_xi,v_eta,omega,d,delta,z1,theta_e,s_err,v_err\n")
 
+
+    def _execute_trajectory(self, trajectory_data):
+        super(CombinedController,self)._execute_trajectory(trajectory_data)
+        self.q=0
 
 
     def _state_callback(self, data):
@@ -75,7 +88,7 @@ class CombinedController(BaseController):
 
         ### PROJECT ONTO PATH###
         # estimate path parameter velocity
-        s_est=self.s+v_xi*self.dt
+        s_est=self.s+abs(v_xi)*self.dt
         
 
         # project
@@ -123,16 +136,31 @@ class CombinedController(BaseController):
 
         ### FEEDBACK CONTROL ###
         # lateral
-        k_lat1,k_lat2,k_lat3=self.get_lateral_feedback_gains(v_xi)
-        delta=c*(0.0992*v_xi**2-0.0949)+theta_e/2-k_lat1*self.q-k_lat2*e-k_lat3*self.edot
+        k_lat1,k_lat2,k_lat3=self.get_lateral_feedback_gains(v_xi, v_ref)
+
+        if v_ref>0:
+            delta=theta_e-k_lat1*self.q-k_lat2*e-k_lat3*self.edot
+
+        elif v_ref<0:
+            delta=k_lat1*z1+k_lat2*theta_e#+0.33/((abs(v_xi)+0.01)*c*np.cos(theta_e)/(1-c*z1)) 
+            #delta=0.33/((abs(v_xi)+0.01)*c*np.cos(theta_e)/(1-c*z1))
+        
+        else:
+            delta=0
                 
 
         #longitudinal
         k_long1,k_long2=self.get_longitudinal_feedback_gains(p)
-        d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
-        d+=(3.012*v_ref+0.6044*np.sign(v_xi))/61.3835 # TODO: currently hard coded feedforward.. consider using parameters instead
+        #d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
+        if v_ref>0:
+            d=(3.012*v_ref+0.6044*np.sign(v_ref))/61.3835-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
+            if d<0: d=0
+        else:
+            d=(3.012*v_ref+0.6044*np.sign(v_ref))/61.3835+k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
+            if d>0: d=0
         
-
+        # TODO: currently hard coded feedforward.. consider using parameters instead
+        
         ### PUBLISH INPUTS ###
         msg=InputValues()
         msg.d=d
@@ -141,16 +169,25 @@ class CombinedController(BaseController):
         self.pub.publish(msg)
 
         ### step reference parameter
-        self.s_ref+=abs(self.get_path_speed(self.s_ref))*self.dt
+        #self.s_ref+=abs(self.get_path_speed(self.s_ref))*self.dt
+        self.s_ref+=abs(v_ref)*self.dt
+        
 
-        # self.logfile.write(f"{data.header.stamp.to_sec()},{position[0]},{position[1]},{phi},{v_xi},{v_eta},omega,,{delta},{z1},{theta_e}\n")
+        #self.logfile.write(f"{data.header.stamp.to_sec()},{position[0]},{position[1]},{phi},{v_xi},{v_eta},omega,,{delta},{z1},{theta_e}\n")
+        #self.logfile.write("{0},{1},{2},{3},{4}\n".format(data.header.stamp.to_sec(),rospy.Time.now().to_sec(),z1, theta_e, -delta))
         self.logfile.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}\n".format(rospy.Time.now().to_sec(),position[0],position[1],phi,v_xi,v_eta,data.omega,d,delta,z1,theta_e,self.s-self.s_ref,v_xi-v_ref)) # Python 2.7 compatible
         #data.header.stamp.to_sec() # -> stamp from optitrack 
 
-    def get_lateral_feedback_gains(self, v_xi):
-        k1=self.k_lat1(v_xi)
-        k2=self.k_lat2(v_xi)
-        k3=self.k_lat3(v_xi)
+    def get_lateral_feedback_gains(self, v_xi, v_ref):
+        if v_ref>0:
+            k1=self.k_lat1(v_xi)
+            k2=self.k_lat2(v_xi)
+            k3=self.k_lat3(v_xi)
+
+        else:
+            k1=self.k_lat1_r(v_xi)
+            k2=self.k_lat2_r(v_xi)
+            k3=None
         return k1,k2,k3
 
 

@@ -84,26 +84,17 @@ class Path:
 
 
 #### AGILE MOTION DEMO ####
+paths=[]
+with open('test_agile_paths.pkl', 'rb') as f:
+    while True:
+        try:
+            paths.append(pickle.load(f))
+        except EOFError:
+            break
 
-with open('path_1_circle.pkl', 'rb') as f:
-    path1=pickle.load(f)
-
-#path1.set_speed(0.75)
-path1.set_speed(0.95)
-
-
-with open('path_2_circle.pkl', 'rb') as f:
-    path2=pickle.load(f)
-
-#path2.set_speed(1)
-path2.set_speed(1.2)
-
-
-with open('path_3_circle.pkl', 'rb') as f:
-    path3=pickle.load(f)
-
-#path3.set_speed(0.75)
-path3.set_speed(1)
+paths[1].set_speed(-0.75)
+paths[3].set_speed(-0.75)
+paths[5].set_speed(-0.75)
 
 
 fleet1tenth=Fleet1tenth(config_file_path=None)
@@ -111,18 +102,18 @@ fleet1tenth=Fleet1tenth(config_file_path=None)
 fleet1tenth.fleet.init_cars("AI_car_01")
 fleet1tenth.fleet.launch_cars("AI_car_01")
 c1=fleet1tenth.fleet.get_car_by_ID("AI_car_01")
-c1.init_logger("drive_logs/agile_motion_hard", gui=False)
+c1.init_logger("drive_logs/man", gui=False)
 c1.start_logging()
 
-global posx, posy, heading
+#global posx, posy, heading
 
-def state_cb(data):
-    global posx, posy, heading
-    posx=data.position_x
-    posy=data.position_y
-    heading=data.heading_angle
+#def state_cb(data):
+#    global posx, posy, heading
+#    posx=data.position_x
+#    posy=data.position_y
+#    heading=data.heading_angle
 
-statesub=rospy.Subscriber("/AI_car_01/state", VehicleStateStamped, callback=state_cb)
+#statesub=rospy.Subscriber("/AI_car_01/state", VehicleStateStamped, callback=state_cb)
 
 # start demonstration
 
@@ -130,39 +121,12 @@ while 1:
     x=input("Press ENTER to start the demonstration! - Type anything in the terminal to abort")
     if x != "":
         break
-    #path1.plot_traj()
-    res=c1.execute_trajectory(path1.tck, path1.speed_tck, (0,path1.length))
-    if not res:
-        break
-
-    time.sleep(1)
-    #path2.plot_traj()
-    while posx<0.2 and posy<0.6:
-        c1.control(-0.05,0.2)
-        time.sleep(0.001)
-
-    c1.control(0,0)
     
-    res=c1.execute_trajectory(path2.tck, path2.speed_tck, (0,path2.length))
-    if not res:
-        break
+    for path in paths:
+        path.plot_traj()
+        res=c1.execute_trajectory(path.tck, path.speed_tck, (0,path.length))
+        if not res:
+            print("Execution failed")
+            break
 
-    while posx>-0.5 and posy<1.38:
-        c1.control(-0.05,0.2)
-        time.sleep(0.001)
-
-    c1.control(0,0)
-    time.sleep(1)
-
-    #path3.plot_traj()
-    res=c1.execute_trajectory(path3.tck, path3.speed_tck, (0,path3.length))
-    if not res:
-        break
-    while heading>6.5*np.pi/6:
-        c1.control(-0.05,0.5)
-        time.sleep(0.001)
-
-    while posx<1.6:
-        c1.control(-0.05,0)
-
-    c1.control(0,0)
+        time.sleep(1)
