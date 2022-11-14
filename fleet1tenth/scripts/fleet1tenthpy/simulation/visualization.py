@@ -23,7 +23,6 @@ class Visualization(QWidget):
         playbacksettingsGB.setLayout(playbacksettingsLayout)
 
 
-        
 
         #widget layout
         layout=QHBoxLayout()

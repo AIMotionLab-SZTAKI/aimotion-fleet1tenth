@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSignal
 #import opencv2 as cv2
 
 
-class PlaybackManager:
+class PlaybackDialog(QDialog):
     def __init__(self, car_IDs):
         """
         Class responsible for the management of the simulation
@@ -17,8 +17,7 @@ class PlaybackManager:
         Arguments:
             - car_IDs(str,list): Unique indentifier of the simulated vehicles
         """
-
-
+        super(PlaybackDialog, self).__init__()
         self.car_IDs=car_IDs
         self.car_logs=[]
 
@@ -26,26 +25,7 @@ class PlaybackManager:
             l=CarLogs(ID)
             self.car_logs.append(l)
 
-        self.gui=Visualization(self.car_IDs)
-
-        # execute gui at the end of the script
-        atexit.register(self.show_gui)
-
-    def show_gui(self):
-        self.gui.show()
-
-
-import matplotlib.pyplot
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox, QApplication, QWidget, QLabel, QLineEdit, QComboBox, QGroupBox
-from PyQt5.QtGui import QMouseEvent,QWheelEvent
-from PyQt5.QtCore import pyqtSignal
-#import opencv2 as cv2
-
-class Visualization(QWidget):
-    def __init__(self, IDs):
-        super(Visualization, self).__init__()
         self.setWindowTitle("fleet1tenth - Vehicle visualization")
-        self.IDs=IDs
 
         #playback visualization layout
         self.carCHB=QCheckBox("Show vehicles")
@@ -59,11 +39,12 @@ class Visualization(QWidget):
         playbacksettingsGB.setTitle("Playback settings")
         playbacksettingsGB.setLayout(playbacksettingsLayout)
 
-
-
         #widget layout
         layout=QHBoxLayout()
         self.setLayout(layout)
+
+    def open_dialog(self):
+        
 
 
 class VideoLabel(QLabel):
