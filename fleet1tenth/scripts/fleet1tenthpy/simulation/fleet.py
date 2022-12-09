@@ -13,7 +13,7 @@ from ..logging import StateLogger
 from ..install_utils import create_clients, create_environment
 import actionlib
 from control.msg import trajectoryAction, trajectoryGoal
-from .manager import PlaybackManager
+from .manager import PlaybackDialog
 import atexit
 # import pygame
 
@@ -321,7 +321,8 @@ class Fleet:
         except RLException:
             raise Exception()
 
-        self.playback_manager=PlaybackManager([c.ID for c in self.cars])
+        self.playback_manager=PlaybackDialog([c.ID for c in self.cars])
+        atexit.register(self.playback_manager.open_dialog)
 
         
 

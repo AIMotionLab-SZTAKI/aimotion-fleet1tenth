@@ -125,6 +125,7 @@ class CombinedController(BaseController):
         # invert z1 for lateral dynamics:
         e=-z1
         self.q+=e
+        self.q=_clamp(self.q,0.2)
 
         # estimate error derivative
         try:
@@ -153,10 +154,10 @@ class CombinedController(BaseController):
         k_long1,k_long2=self.get_longitudinal_feedback_gains(p)
         #d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
         if v_ref>0:
-            d=(3.012*v_ref+0.6044*np.sign(v_ref))/61.3835-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
+            d=(3.65*v_ref/p+0.6044*np.sign(v_ref))/61.3835-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
             if d<0: d=0
         else:
-            d=(3.012*v_ref+0.6044*np.sign(v_ref))/61.3835+k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
+            d=(3.65*v_ref/p+0.6044*np.sign(v_ref))/61.3835+k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
             if d>0: d=0
         
         # TODO: currently hard coded feedforward.. consider using parameters instead
@@ -168,8 +169,7 @@ class CombinedController(BaseController):
 
         self.pub.publish(msg)
 
-        ### step reference parameter
-        #self.s_ref+=abs(self.get_path_speed(self.s_ref))*self.dt
+        ### step reference parameters
         self.s_ref+=abs(v_ref)*self.dt
         
 

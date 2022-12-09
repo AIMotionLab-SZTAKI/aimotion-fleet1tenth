@@ -10,6 +10,7 @@ from drive_bridge_msg.msg import InputValues
 from vehicle_state_msgs.msg import VehicleStateStamped
 import matplotlib.pyplot as plt
 from os.path import expanduser
+from math import ceil
 
 def RungeKutta4_step(t, h, y_n, model, inputs):
     """Executes 1 step of the Runge-Kutta method with input params kept as a constant"""
@@ -51,7 +52,7 @@ def _clamp(value, bound):
 
 
 class SimulatedCar:
-    def __init__(self, ID, model_data, default_model):
+    def __init__(self, ID, model_data, default_model, FREQUCENCY):
         """
         Class responsible for the simulation of the vehicle dynamics for the specified car
 
@@ -72,6 +73,14 @@ class SimulatedCar:
         #input values
         self.d=[0]
         self.delta=[0]
+
+        self.dt=1.0/FREQUCENCY
+
+        if self.dt>0.001:
+            self.num_of_steps=ceil(self.dt/0.001)
+            self.stepsize=self.dt/self.num_of_steps
+        else:
+            self.stepsize=None
 
         # physical params
         try: # try custom params
@@ -123,22 +132,15 @@ class SimulatedCar:
         self.t=[0]
 
 
-    def step(self, inputs,t, dt, method="RK45"):
+    def step(self, inputs,t):
         """
         Steps the simulation with the specified time step
 
         Arguments:
             - inputs(tuple): The condtol inputs of the system (d, delta)
-            - dt(float): Time step in [s]
-            - method(str): Integration method to use. Available options:
-
-                - "RK45"(default): Explicit Runge-Kutta method of order 5(4). The error is controlled assuming accuracy of the fourth-order method, but steps are taken using the fifth-order accurate formula (local extrapolation is done). 
-                - "RK23": Explicit Runge-Kutta method of order 3(2). The error is controlled assuming accuracy of the second-order method, but steps are taken using the third-order accurate formula (local extrapolation is done)
-                - "DOP853": Explicit Runge-Kutta method of order 8. Python implementation of the “DOP853” algorithm originally written in Fortran [14]. A 7-th order interpolation polynomial accurate to 7-th order is used for the dense output. Can be applied in the complex domain.
-                - "Radau": Implicit Runge-Kutta method of the Radau IIA family of order 5. The error is controlled with a third-order accurate embedded formula.
-                - "BDF": Implicit multi-step variable-order (1 to 5) method based on a backward differentiation formula for the derivative approximation.
-                - "LSODA": Adams/BDF method with automatic stiffness detection and switching. This is a wrapper of the Fortran solver from ODEPACK.
+            - t(float): Simulation time
         """
+
         inputs=list(inputs)
         inputs[0]=_clamp(inputs[0],self.d_max)
         
@@ -155,14 +157,23 @@ class SimulatedCar:
         #self.v_xi.append(states[3][9])
         #self.v_eta.append(states[4][9])
         #self.omega.append(states[5][9])
+        
+        states=self.get_current_states()
+        if self.stepsize is not None:
+            for _ in range(self.num_of_steps):
+                _, states=RungeKutta4_step(0,self.stepsize,states,self.dynamics, inputs)        
+        else:
+            _, states=RungeKutta4_step(0,self.dt,states,self.dynamics, inputs)
 
-        states=RungeKutta4_step(0,dt,self.get_current_states(),self.dynamics, inputs)
-        self.x.append(states[1][0])
-        self.y.append(states[1][1])
-        self.phi.append(_normalize(states[1][2]))
-        self.v_xi.append(states[1][3])
-        self.v_eta.append(states[1][4])
-        self.omega.append(states[1][5])
+        #states=RungeKutta4_step(0,self.dt,states,self.dynamics, inputs)
+
+
+        self.x.append(states[0])
+        self.y.append(states[1])
+        self.phi.append(_normalize(states[2]))
+        self.v_xi.append(states[3])
+        self.v_eta.append(states[4])
+        self.omega.append(states[5])
 
         self.t.append(t)
         #time.sleep(1)
@@ -194,18 +205,13 @@ class SimulatedCar:
         F_xi=self.C_m1*d-self.C_m2*v_xi-np.sign(v_xi)*self.C_m3
 
         # obtain lateral tire forces
-        if abs(v_xi)>0.4:# only use tire model for moving vehicles
-            alpha_f=-(omega*self.l_f+v_eta)/abs(v_xi)+delta
-            alpha_r=(omega*self.l_r-v_eta)/abs(v_xi)
+        if abs(v_xi)>0.1:# only use tire model for moving vehicles
+            alpha_f=-(omega*self.l_f+v_eta)/(v_xi)+delta
+            alpha_r=(omega*self.l_r-v_eta)/(v_xi)
                 
             F_f_eta=self.C_f*alpha_f
             F_r_eta=self.C_r*alpha_r
             
-                #alpha_f=(v_eta+omega*self.l_f)/abs(v_xi)-delta
-                #alpha_r=(v_eta-omega*self.l_r)/abs(v_xi)
-
-                #F_f_eta=self.C_f*alpha_f
-                #F_r_eta=self.C_r*alpha_r
         else:
             F_f_eta=0
             F_r_eta=0
@@ -268,14 +274,14 @@ class Simulator:
         # launch all the cars if no ID provided
         if launched_vehicles == "None":
             for car_ID in vehicle_data:
-                c=SimulatedCar(car_ID, vehicle_data[car_ID], default_model)
+                c=SimulatedCar(car_ID, vehicle_data[car_ID], default_model, FREQUENCY)
                 self.cars.append(c)
         
         # only launch the defined cars
         else:
             for car_ID in vehicle_data:
                 if car_ID in launched_vehicles:
-                    c=SimulatedCar(car_ID, vehicle_data[car_ID],default_model)
+                    c=SimulatedCar(car_ID, vehicle_data[car_ID],default_model, FREQUENCY)
                     self.cars.append(c)
 
         # init the subscribers and publishers of the vehicle and create input matrix
@@ -319,7 +325,7 @@ class Simulator:
             for key, value in self.input_matrix.items():
                 c=next((c for c in self.cars if c.ID == key), None)
                 self.timer+=1.0/self.FREQUENCY
-                c.step(self.input_matrix[c.ID][1], self.timer,1.0/self.FREQUENCY, method=self.SOLVER)
+                c.step(self.input_matrix[c.ID][1], self.timer)
                 
 
             # publish if all the simulation were stepped to reduce delay
@@ -339,7 +345,7 @@ class Simulator:
             if self.validate_input_matrix():
                 for c in self.cars:
                     self.timer+=1.0/self.FREQUENCY
-                    c.step(self.input_matrix[c.ID][1],self.timer, 1.0/self.FREQUENCY, method=self.SOLVER)
+                    c.step(self.input_matrix[c.ID][1],self.timer)
                     
             
                 for c in self.cars:# another for loop to reduce delay between the published messages

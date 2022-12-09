@@ -1,12 +1,18 @@
 import rospy
 from vehicle_state_msgs.msg import VehicleStateStamped
-from .visualization import Visualization
 import atexit
-import matplotlib.pyplot
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox, QApplication, QWidget, QLabel, QLineEdit, QComboBox, QGroupBox
+import numpy as np
+from matplotlib.figure import Figure
+from matplotlib.animation import TimedAnimation
+from matplotlib.lines import Line2D
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.patches import Rectangle
+import matplotlib
+from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QComboBox, QGroupBox, QFileDialog
 from PyQt5.QtGui import QMouseEvent,QWheelEvent
 from PyQt5.QtCore import pyqtSignal
-#import opencv2 as cv2
+import pandas as pd
+matplotlib.use("Qt5Agg")
 
 
 class PlaybackDialog(QDialog):
@@ -25,124 +31,172 @@ class PlaybackDialog(QDialog):
             l=CarLogs(ID)
             self.car_logs.append(l)
 
+
+    def init_ui(self):
         self.setWindowTitle("fleet1tenth - Vehicle visualization")
 
         #playback visualization layout
-        self.carCHB=QCheckBox("Show vehicles")
-        self.pathCHB=QCheckBox("Show paths")
+        #self.carCHB=QCheckBox("Show vehicles")
+        #self.pathCHB=QCheckBox("Show paths")
 
-        playbacksettingsLayout=QVBoxLayout()
-        playbacksettingsLayout.addWidget(self.carCHB)
-        playbacksettingsLayout.addWidget(self.pathCHB)
+        #playbacksettingsLayout=QHBoxLayout()
+        #playbacksettingsLayout.addWidget(self.carCHB)
+        #playbacksettingsLayout.addWidget(self.pathCHB)
 
-        playbacksettingsGB=QGroupBox()
-        playbacksettingsGB.setTitle("Playback settings")
-        playbacksettingsGB.setLayout(playbacksettingsLayout)
+        #playbacksettingsGB=QGroupBox()
+        #playbacksettingsGB.setTitle("Playback settings")
+        #playbacksettingsGB.setLayout(playbacksettingsLayout)
+
+        self.vidFIG=FigAnimation(self.car_logs)
+        #self.vidLBL = VideoLabel()
+        #self.vidLBL.setAlignment(Qt.AlignCenter)
+        #self.vidLBL.setMinimumSize(400, 400)
+        #self.vidLBL.setStyleSheet("background-color: #ffffff")
+
+
+        self.exportVidBTN=QPushButton("Export video")
+        self.exportVidBTN.clicked.connect(self.export_video)
+
+        btnLayout=QHBoxLayout()
+        btnLayout.addWidget(self.exportVidBTN)
+
+        vidplaybackLayout=QVBoxLayout()
+        #vidplaybackLayout.addWidget(playbacksettingsGB)
+        vidplaybackLayout.addWidget(self.vidFIG)
+        vidplaybackLayout.addLayout(btnLayout)
+
+
+        self.carCMB=QComboBox()
+        self.carCMB.addItems([car.ID for car in self.car_logs])
+        exportcardataBTN=QPushButton("Export logged data")
+        exportcardataBTN.clicked.connect(self.export_data)
+
+        exportLayout=QHBoxLayout()
+        exportLayout.addWidget(self.carCMB)
+        exportLayout.addWidget(exportcardataBTN)
+
 
         #widget layout
-        layout=QHBoxLayout()
+        layout=QVBoxLayout()
+        layout.addLayout(vidplaybackLayout)
+        layout.addLayout(exportLayout)
         self.setLayout(layout)
 
+        
+
+    def export_data(self):
+        logs=next((x for x in self.car_logs if x.ID == self.carCMB.currentText()), None)
+        data=np.zeros((len(logs.t), 9))
+        data[:,0]=np.asarray(logs.t)
+        data[:,1]=np.asarray(logs.x)
+        data[:,2]=np.asarray(logs.y)
+        data[:,3]=np.asarray(logs.phi)
+        data[:,4]=np.asarray(logs.v_xi)
+        data[:,5]=np.asarray(logs.v_eta)
+        data[:,6]=np.asarray(logs.omega)
+        data[:,7]=np.asarray(logs.d)
+        data[:,8]=np.asarray(logs.delta)
+        df = pd.DataFrame(data, columns=["t [s]","x [m]","y [m]","phi [rad]","v_xi [m/s]","v_eta [m/s]","omega [rad/s]", "d [1]", "delta [rad]"])
+        save_name = QFileDialog.getSaveFileName(
+                self,
+                "Save data",
+                "/",
+                "CSV file (*.csv);;Text file (*.txt);;Excel file (*.xlsx)",
+            )
+        if save_name[0] != "":
+            #if save_name[1] == "Excel file (*.xlsx)":
+            #    df.to_excel(save_name[0])
+            #else:
+            df.to_csv(save_name[0])
+
+
+    def export_video(self):
+        save_name = QFileDialog.getSaveFileName(
+                self,
+                "Save video",
+                "/",
+                "GIF file (*.gif)",
+            )
+        if save_name[0] != "":
+            #if save_name[1] == "Excel file (*.xlsx)":
+            #    df.to_excel(save_name[0])
+            #else:
+            self.vidFIG.save(save_name[0]+".gif", writer="ffmpeg")
+
     def open_dialog(self):
+        self.init_ui()
+        self.exec_()
+
+    def close(self) -> bool:
+        self.vidFIG.close_event()
+        return super().close()
         
 
 
-class VideoLabel(QLabel):
-    """Label to display the visualization frames"""
 
-    # create signals
-    press = pyqtSignal(float, float)
-    moving = pyqtSignal(float, float)
-    release = pyqtSignal(float, float)
-    wheel = pyqtSignal(float)
+class FigAnimation(FigureCanvas, TimedAnimation):
+    def __init__(self, logs):
+        #load data
+        self.logs=logs
+        self.t=self.logs[0].t
 
-    def __init__(self, parent=None):
-        """Intitialization"""
-        self.press_pos = None
-        self.current_pos = None
-        super(VideoLabel, self).__init__(parent)
+        # create figure
+        self.fig=Figure(figsize=(5,5),dpi=150)
+        self.ax=self.fig.add_subplot(111)
 
-    def wheelEvent(self, a0: QWheelEvent):
-        """Handles wheel event, emits signal with zoom parameter"""
-        if a0.angleDelta().y() > 0:
-            self.wheel.emit(-0.1)
-        else:
-            self.wheel.emit(0.1)
-        return super().wheelEvent(a0)
+        self.ax.set_xlabel("X [m]")
+        self.ax.set_ylabel("Y [m]")
 
-    def mousePressEvent(self, ev: QMouseEvent):
-        """Handles mouse press event, emits coordinates"""
-        x_label, y_label, = ev.x(), ev.y()
+        self.ax.set_xlim(min(min(l.x for l in self.logs))-0.1,max(max(l.x for l in self.logs))+0.1)
+        self.ax.set_ylim(min(min(l.y for l in self.logs))-0.1,max(max(l.y for l in self.logs))+0.1)
+        self.ax.grid()
+        self.ax.set_aspect("equal")
 
-        if self.pixmap():
-            label_size = self.size()
-            pixmap_size = self.pixmap().size()
-            width = pixmap_size.width()
-            height = pixmap_size.height()
+        self.lines=[]
+        self.rects=[]
 
-            x_0 = int((label_size.width() - width) / 2)
-            y_0 = int((label_size.height() - height) / 2)
+        for i in range(len(logs)):
+            l=Line2D([], [])
+            x=logs[i].x[0]
+            y=logs[i].y[0]
+            phi=logs[i].phi[0]
+            xr=x-0.165*np.cos(phi)-0.1*np.cos(np.pi/2+phi)
+            yr=y-0.165*np.sin(phi)-0.1*np.sin(np.pi/2+phi)
+            rect=Rectangle(xy=(xr,yr), width=0.33, height=0.2, angle=np.rad2deg(phi))
+            self.lines.append(l)
+            self.ax.add_line(l)
+            self.ax.add_patch(rect)
+            
 
-            if (
-                x_label >= x_0
-                and x_label < (x_0 + width)
-                and y_label >= y_0
-                and y_label < (y_0 + height)
-            ):
-                x_rel = (x_label - x_0 - width / 2) / width
-                y_rel = (y_label - y_0 - height / 2) / height
-                self.press_pos = (x_rel, y_rel)
-                self.press.emit(x_rel, y_rel)
-        super().mousePressEvent(ev)
+        FigureCanvas.__init__(self, self.fig)
+        TimedAnimation.__init__(self,self.fig,interval=50, blit=True)
 
-    def mouseMoveEvent(self, ev: QMouseEvent):
-        """Handles mouse movement, emits coordinates"""
-        x_label, y_label, = ev.x(), ev.y()
 
-        if self.pixmap():
-            label_size = self.size()
-            pixmap_size = self.pixmap().size()
-            width = pixmap_size.width()
-            height = pixmap_size.height()
+    def _draw_frame(self, framedata):
+        # delete rectangles
+        [p.remove() for p in reversed(self.ax.patches)]
 
-            x_0 = int((label_size.width() - width) / 2)
-            y_0 = int((label_size.height() - height) / 2)
+        for i in range(len(self.lines)):
+            #self.ax.plot(self.logs[i].x[0:framedata], self.logs[i].y[0:framedata])
+            self.lines[i].set_data(self.logs[i].x[0:framedata], self.logs[i].y[0:framedata])
 
-            if (
-                x_label >= x_0
-                and x_label < (x_0 + width)
-                and y_label >= y_0
-                and y_label < (y_0 + height)
-            ):
-                x_rel = (x_label - x_0 - width / 2) / width
-                y_rel = (y_label - y_0 - height / 2) / height
-                self.moving.emit(x_rel, y_rel)
-                self.current_pos = (x_rel, y_rel)
-        super().mousePressEvent(ev)
+            x=self.logs[i].x[framedata]
+            y=self.logs[i].y[framedata]
+            phi=self.logs[i].phi[framedata]
+            xr=x-0.165*np.cos(phi)-0.1*np.cos(np.pi/2+phi)
+            yr=y-0.165*np.sin(phi)-0.1*np.sin(np.pi/2+phi)
+            rect=Rectangle(xy=(xr,yr), width=0.33, height=0.2, angle=np.rad2deg(phi), color="black", zorder=10)
+            self.ax.add_patch(rect)
+    
+            
 
-    def mouseReleaseEvent(self, ev: QMouseEvent):
-        """Handles mouse release, emits coordinates"""
-        x_label, y_label, = ev.x(), ev.y()
 
-        if self.pixmap():
-            label_size = self.size()
-            pixmap_size = self.pixmap().size()
-            width = pixmap_size.width()
-            height = pixmap_size.height()
+    def new_frame_seq(self):
+        return iter(range(len(self.t)))
 
-            x_0 = int((label_size.width() - width) / 2)
-            y_0 = int((label_size.height() - height) / 2)
-
-            if (
-                x_label >= x_0
-                and x_label < (x_0 + width)
-                and y_label >= y_0
-                and y_label < (y_0 + height)
-            ):
-                x_rel = (x_label - x_0 - width / 2) / width
-                y_rel = (y_label - y_0 - height / 2) / height
-                self.release.emit(x_rel, y_rel)
-        super().mousePressEvent(ev)
+    def _init_draw(self):
+        for l in self.lines:
+            l.set_data([], [])
 
 
 

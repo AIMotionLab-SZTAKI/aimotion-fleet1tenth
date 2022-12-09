@@ -123,7 +123,7 @@ while 1:
         break
     
     for path in paths:
-        path.plot_traj()
+        #path.plot_traj()
         res=c1.execute_trajectory(path.tck, path.speed_tck, (0,path.length))
         if not res:
             print("Execution failed")

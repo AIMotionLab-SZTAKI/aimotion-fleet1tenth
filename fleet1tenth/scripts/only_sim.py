@@ -1,4 +1,3 @@
-from re import S
 import matplotlib.pyplot as plt
 from fleet1tenthpy import Fleet1tenth
 import time
@@ -18,8 +17,11 @@ def _normalize(angle):
         angle += 2*np.pi
 
     return angle
+fleet1tenth=Fleet1tenth(config_file_path=None)
 
-
+fleet1tenth.fleet.init_cars("AI_car_01")
+fleet1tenth.fleet.launch_cars("AI_car_01")
+c1=fleet1tenth.fleet.get_car_by_ID("AI_car_01")
 
 ###ONLY FOR TESTING !REMOVE!###
 class Path:
@@ -50,12 +52,12 @@ class Path:
         par = np.linspace(0, self.length, 1001)
         par = np.reshape(par, par.size)
 
-        self.tck, self.u, *rest = splprep([X, Y], k=2, s=0.1, u=par)
+        self.tck, self.u, *rest = splprep([X, Y], k=2, s=1, u=par)
 
         speed_vect=const_speed*np.ones(len(self.u))
         for i in range(50):
-            speed_vect[i]=np.sign(const_speed)*0.4+(const_speed-np.sign(const_speed)*0.4)*i/50
-            speed_vect[len(speed_vect)-50+i]=const_speed+(np.sign(const_speed)*0.4-const_speed)*(i)/50
+            speed_vect[i]=0.4+const_speed*i/100
+            speed_vect[-i-1]=0.4+const_speed*i/100
         speed_vect[-1]=0
         self.speed_tck=splrep(self.u,speed_vect)
     
@@ -63,8 +65,6 @@ class Path:
         (x,y)=splev(self.u, self.tck)
         v=splev(self.u,self.speed_tck)
         plt.plot(x,y)
-        plt.plot(self.x_points,self.y_points, "bo")
-        plt.grid()
         plt.plot(self.u,v)
         plt.show()
 
@@ -86,54 +86,41 @@ class Path:
         return x,y,theta_p
 
     
-### define path points
-
-start_p=np.array([1.78,-0.22])
-end_p=np.array([1.9,0.3])
-rounds=9
-
-cx=0
-cy=0
-r=1
-points=np.zeros((12,2))
 
 
-for i in range(0,12):
-    points[i][0]=cx+r*np.cos(2*np.pi*i/12)
-    points[i][1]=cy+r*np.sin(2*np.pi*i/12)
-
-points=np.flip(points, axis=0)
-
-
-#alloc array for all the path points
-all_path=np.zeros((12*rounds+5,2))
-all_path[0,:]=start_p
-all_path[1,:]=np.array([start_p[0]-0.10, start_p[1]-0.0])
-all_path[2,:]=np.array([start_p[0]-0.20, start_p[1]-0.0])
-all_path[3,:]=np.array([start_p[0]-0.30, start_p[1]-0.05])
-
-
-for i in range(rounds):
-    all_path[i*12+4:i*12+16,:]=points
-
-
-
-all_path[-1,:]=end_p
-all_path[-2,:]=np.array([end_p[0]-0.2, end_p[1]])
-
-path=Path(all_path,const_speed=0.8
+path_points = np.array(
+    [
+        [0, 0],
+        [1, 1],
+        [2, 2],
+        [3, 2],
+        [4, 1],
+        [4.5, 0],
+        [4, -1],
+        [3, -2],
+        [2, -2],
+        [1, -1],
+        [0, 0],
+        [-1, 1],
+        [-2, 2],
+        [-3, 2],
+        [-4, 1],
+        [-4.5, 0],
+        [-4, -2],
+        [-3, -2],
+        [-2, -2],
+        [-1, -1],
+        [0, 0],
+    ]
 )
+
+path=Path(path_points=path_points, const_speed=0.8)
 
 x,y,theta_p=path.get_starting_data()
 print(f"Starting position: {x},  {y},  {theta_p}")
 
-fleet1tenth=Fleet1tenth(config_file_path=None)
-
-fleet1tenth.fleet.init_cars("AI_car_01")
-fleet1tenth.fleet.launch_cars("AI_car_01")
-c1=fleet1tenth.fleet.get_car_by_ID("AI_car_01")
-
 path.plot_traj()
 
-
 res=c1.execute_trajectory(path.tck, path.speed_tck, (0,path.length))
+if not res:
+    print("FAIL")
