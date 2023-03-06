@@ -7,6 +7,8 @@ from std_msgs.msg import Float64, Header
 from vesc_msgs.msg import VescStateStamped
 from vehicle_state_msgs.msg import VehicleStateStamped
 import math
+import yaml
+import os
 
 
 class Estimator:
@@ -216,18 +218,27 @@ if __name__ == '__main__':
         rospy.init_node('state_observer_node', anonymous=True)
 
         # Get ROS parames
-        l_offs=rospy.get_param("~tracker_offset") # distance of tracked RigidBody from CoM
+        with open(os.path.dirname(os.path.dirname(__file__))+"/config/config.yaml") as f:
+            try:
+                parameters=yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print("Cannot load YAML file!")
+
         frequency=rospy.get_param("/AIMotionLab/FREQUENCY", 40.0)
-        cutoff=rospy.get_param("~cutoff", 2)
         
-        try:
-            pose_topic=rospy.get_param("~mocap_external_topic")
-        except KeyError:
+        mocap_source=rospy.get_param("~MOCAP_SOURCE")
+
+        if mocap_source== "external":
+            pose_topic=parameters["MOCAP_EXTERNAL_TOPIC"]
+        else:
             pose_topic="aimotion_mocap_node/pose"
+
+        cutoff=float(parameters["CUTOFF"])
+        l_offs=float(parameters["MARKER_OFFSET"]) # distance of tracked RigidBody from CoM
 
 
         # init estimator
-        estimator=Estimator(l_offs=l_offs, filter_window=10, frequency=frequency, cutoff=cutoff)
+        estimator=Estimator(l_offs=l_offs, filter_window=3, frequency=frequency, cutoff=cutoff)
         
         # init subscribers
         rospy.Subscriber(pose_topic, PoseStamped, estimator.process)

@@ -3,16 +3,23 @@
 import rospy
 from drive_bridge_msg.msg import InputValues
 from std_msgs.msg import Float64
-
+import yaml
+import os
 
 class DriveBridge:
     def __init__(self):
         rospy.init_node("drive_bridge", anonymous=True)
 
         # get ROS parameters
-        self.angle_offset=float(rospy.get_param("~angle_offset", 0.5))
-        self.angle_gain=float(rospy.get_param("~angle_gain", 1))
-        self.reference_limit=float(rospy.get_param("~reference_limit", 0.25))
+        with open(os.path.dirname(os.path.dirname(__file__))+"/config/config.yaml") as f:
+            try:
+                parameters=yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print("Cannot load YAML data!")
+
+        self.angle_offset=float(parameters["STEERING_GAINS"][1])
+        self.angle_gain=float(parameters["STEERING_GAINS"][0])
+        self.reference_limit=float(parameters["MOTOR_LIMIT"])
 
         # Create Publishers
         self.delta_pub=rospy.Publisher("commands/servo/position", Float64, queue_size=1)

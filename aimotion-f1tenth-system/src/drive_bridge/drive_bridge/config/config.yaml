@@ -1,0 +1,3 @@
+# Driving settings
+STEERING_GAINS: [-0.82879, 0.46146] #[1/rad] [1] used for delta-> control input conversion
+MOTOR_LIMIT: 0.1 # The absolute limit of the motors reference input that normally ranges from -1 to 1

@@ -5,6 +5,9 @@
 
 from controllers import CombinedController
 import rospy
+import yaml
+import os
+
 #from scipy.interpolate import splprep,splrep, splev
 #import numpy as np
 #from drive_bridge_msg.msg import InputValues
@@ -78,15 +81,22 @@ if __name__=="__main__":
     try:
         rospy.init_node("path_following_control_node", anonymous=True)
         
-        # get ROS params
+        # get ROS params for CombinedController
         freq=float(rospy.get_param("/AIMotionLab/FREQUENCY", 40.0))
-        lat_gains=rospy.get_param("~lateral_gains")
-        long_gains=rospy.get_param("~longitudinal_gains")
-        lat_gains_reverse={"k1":[-0.0008,0.0442, -1.2247],"k2":[-0.0002,0.0191,-0.9531]} # GS TODO: move to ROS param server
-        lat_gains_reverse={"k1":[-0.0124,0.11,-0.646,0.0218],"k2":[-0.0194,0.167,-1.02,0.033]} # LPV TODO: move to ROS param server
+
+
+        # local parameters
+        with open(os.path.dirname(os.path.dirname(__file__))+"/config/config.yaml") as f:
+            try:
+                parameters=yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print("Cannot load yaml parameter file!")
+
+        lat_gains=parameters["CombinedController"]["LATERAL_CONTROL_GAINS"]
+        long_gains=parameters["CombinedController"]["LONGITUDINAL_CONTROL_GAINS"]
 
         # init controller
-        controller=CombinedController(FREQUENCY=freq,projection_window=3, lateral_gains=lat_gains,lateral_gains_reverse=lat_gains_reverse,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.2)
+        controller=CombinedController(FREQUENCY=freq,projection_window=3, lateral_gains=lat_gains,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.2)
         
         # controller.speed_tck=
         # controller.trajectory_tck=path.tck

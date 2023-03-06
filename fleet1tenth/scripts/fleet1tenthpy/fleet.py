@@ -42,19 +42,19 @@ class Car:
         self.PASSWORD=PARAMS_DICT["PASSWORD"]
 
         # TODO: consider adding modelling info instead of storing data onboard
-        self.STEERING_GAINS=PARAMS_DICT["STEERING_GAINS"]
-        self.MARKER_OFFSET=PARAMS_DICT["MARKER_OFFSET"]
-        self.MOTOR_LIMIT=PARAMS_DICT["MOTOR_LIMIT"]
+        #self.STEERING_GAINS=PARAMS_DICT["STEERING_GAINS"]
+        #self.MARKER_OFFSET=PARAMS_DICT["MARKER_OFFSET"]
+        #self.MOTOR_LIMIT=PARAMS_DICT["MOTOR_LIMIT"]
 
-        self.LATERAL_CONTROL_GAINS=PARAMS_DICT["control"]["LATERAL_CONTROL_GAINS"]
-        self.LONGITUDINAL_CONTROL_GAINS=PARAMS_DICT["control"]["LONGITUDINAL_CONTROL_GAINS"]
+        #self.LATERAL_CONTROL_GAINS=PARAMS_DICT["control"]["LATERAL_CONTROL_GAINS"]
+        #self.LONGITUDINAL_CONTROL_GAINS=PARAMS_DICT["control"]["LONGITUDINAL_CONTROL_GAINS"]
 
-        self.MOTION_CAPTURE=PARAMS_DICT["MOTION_CAPTURE"]
-        try:
-            self.MOCAP_EXTERNAL_TOPIC=PARAMS_DICT["MOCAP_EXTERNAL_TOPIC"]
-        except KeyError:
-            if self.MOTION_CAPTURE=="external":
-                raise Exception("MOTION_CAPTURE is set to 'external', but no topic name is provided. To resolve this issue set MOCAP_EXTERNAL_TOPIC is the configuration file.")
+        self.MOCAP_SOURCE=PARAMS_DICT["MOCAP_SOURCE"]
+        #try:
+        #    self.MOCAP_EXTERNAL_TOPIC=PARAMS_DICT["MOCAP_EXTERNAL_TOPIC"]
+        #except KeyError:
+        #    if self.MOTION_CAPTURE=="external":
+        #        raise Exception("MOTION_CAPTURE is set to 'external', but no topic name is provided. To resolve this issue set MOCAP_EXTERNAL_TOPIC is the configuration file.")
 
         self.running=False
         self.launch=None
@@ -137,26 +137,27 @@ class Car:
         """
 
         # set ROS parameters
-        rospy.set_param("/"+self.ID+"/drive_bridge/angle_gain", self.STEERING_GAINS[0])
-        rospy.set_param("/"+self.ID+"/drive_bridge/angle_offset", self.STEERING_GAINS[1])
-        rospy.set_param("/"+self.ID+"/drive_bridge/reference_limit", self.MOTOR_LIMIT)
+        #rospy.set_param("/"+self.ID+"/drive_bridge/angle_gain", self.STEERING_GAINS[0])
+        #rospy.set_param("/"+self.ID+"/drive_bridge/angle_offset", self.STEERING_GAINS[1])
+        #rospy.set_param("/"+self.ID+"/drive_bridge/reference_limit", self.MOTOR_LIMIT)
 
-        rospy.set_param("/"+self.ID+"/state_observer_node/tracker_offset", self.MARKER_OFFSET)
-        if self.MOTION_CAPTURE == "external":
-            try:
-                rospy.set_param("/"+self.ID+"/state_observer_node/mocap_external_topic", self.MOCAP_EXTERNAL_TOPIC)
-            except KeyError:
-                raise Exception("MOTION_CAPTURE is set to external but no external topic name is provided! To resolve this issue specify MOCAP_EXTERNAL_TOPIC in the configuration file")
+        #rospy.set_param("/"+self.ID+"/state_observer_node/tracker_offset", self.MARKER_OFFSET)
+        rospy.set_param("/"+self.ID+"/state_observer_node/MOCAP_SOURCE", self.MOCAP_SOURCE)
+        #if self.MOTION_CAPTURE == "external":
+        #    try:
+        #        rospy.set_param("/"+self.ID+"/state_observer_node/mocap_external_topic", self.MOCAP_EXTERNAL_TOPIC)
+        #    except KeyError:
+        #        raise Exception("MOTION_CAPTURE is set to external but no external topic name is provided! To resolve this issue specify MOCAP_EXTERNAL_TOPIC in the configuration file")
 
-        rospy.set_param("/"+self.ID+"/path_following_control_node/lateral_gains", self.LATERAL_CONTROL_GAINS)
-        rospy.set_param("/"+self.ID+"/path_following_control_node/longitudinal_gains", self.LONGITUDINAL_CONTROL_GAINS)
+        #rospy.set_param("/"+self.ID+"/path_following_control_node/lateral_gains", self.LATERAL_CONTROL_GAINS)
+        #rospy.set_param("/"+self.ID+"/path_following_control_node/longitudinal_gains", self.LONGITUDINAL_CONTROL_GAINS)
 
         # Configure logging
         uuid=roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
 
         # setup CLI arguments
-        cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/vehicle.launch', f'machine_ip:={self.IP_ADRESS}',f'username:={self.USERNAME}',f'password:={self.PASSWORD}',f'car_id:={self.ID}', f'motion_capture:={self.MOTION_CAPTURE}']
+        cli_args=[str(Path(__file__).parents[2])+'/src/start/launch/vehicle.launch', f'machine_ip:={self.IP_ADRESS}',f'username:={self.USERNAME}',f'password:={self.PASSWORD}',f'car_id:={self.ID}', f'motion_capture:={self.MOCAP_SOURCE}']
         roslaunch_args=cli_args[1:]
         roslaunch_file=[(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
 

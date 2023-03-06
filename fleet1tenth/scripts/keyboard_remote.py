@@ -12,7 +12,7 @@ fleet.init_cars("AI_car_01")
 fleet.launch_cars("AI_car_01")
 
 car1=fleet.get_car_by_ID("AI_car_01")
-car1.init_logger("drive_logs/motion", gui=True)
+car1.init_logger("identify/motion", gui=True)
 # starts the control application
 fleet.keyboard_remote()
 

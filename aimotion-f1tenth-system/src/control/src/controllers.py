@@ -2,8 +2,6 @@
 
 # Developed in Python 2.7
 
-from ipaddress import v4_int_to_packed
-from ssl import VERIFY_X509_TRUSTED_FIRST
 import numpy as np
 from control_utils import BaseController, project_to_closest, _normalize, _clamp
 from vehicle_state_msgs.msg import VehicleStateStamped
@@ -16,7 +14,7 @@ import time
 
 
 class CombinedController(BaseController):
-    def __init__(self, FREQUENCY, lateral_gains, lateral_gains_reverse, longitudinal_gains, projection_window, projection_step, look_ahead=0):
+    def __init__(self, FREQUENCY, lateral_gains, longitudinal_gains, projection_window, projection_step, look_ahead=0):
         """
         Implementation of the path tracking control algorithm:
                 -> Lateral control: Upgraded Stanley method using lateral error dynamics
@@ -41,17 +39,21 @@ class CombinedController(BaseController):
         self.k_lat3=np.poly1d(lateral_gains["k3"])
 
         
-        self.k_lat1_r=np.poly1d(lateral_gains_reverse["k1"])
-        self.k_lat2_r=np.poly1d(lateral_gains_reverse["k2"])
+        self.k_lat1_r=np.poly1d(lateral_gains["k1_r"])
+        self.k_lat2_r=np.poly1d(lateral_gains["k2_r"])
         #self.k_lat1_r=np.poly1d([-0.0008,0.0442, -1.2247])
         #self.k_lat2_r=np.poly1d([-0.0002,0.0191,-0.9531])
 
         self.k_long1=np.poly1d(longitudinal_gains["k1"])
         self.k_long2=np.poly1d(longitudinal_gains["k2"])
+        self.m=longitudinal_gains["m"]
+        self.C_m1=longitudinal_gains["C_m1"]
+        self.C_m2=longitudinal_gains["C_m2"]
+        self.C_m3=longitudinal_gains["C_m3"]
 
 
         self.logfile=open(expanduser("~")+"/car1.csv", "w")
-        self.logfile.write(str(longitudinal_gains["k1"])+"\n")
+        self.logfile.write(str(self.k_long1(1))+"\n")
         
         self.logfile.write("t,x,y,phi,v_xi,v_eta,omega,d,delta,z1,theta_e,s_err,v_err\n")
 
@@ -154,10 +156,10 @@ class CombinedController(BaseController):
         k_long1,k_long2=self.get_longitudinal_feedback_gains(p)
         #d=-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref)
         if v_ref>0:
-            d=(3.65*v_ref/p+0.6044*np.sign(v_ref))/61.3835-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
+            d=(self.C_m2*v_ref/p+self.C_m3*np.sign(v_ref))/self.C_m1-k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
             if d<0: d=0
         else:
-            d=(3.65*v_ref/p+0.6044*np.sign(v_ref))/61.3835+k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
+            d=(self.C_m2*v_ref/p+self.C_m3*np.sign(v_ref))/self.C_m1+k_long1*(self.s-self.s_ref)-k_long2*(v_xi-v_ref/p)
             if d>0: d=0
         
         # TODO: currently hard coded feedforward.. consider using parameters instead
