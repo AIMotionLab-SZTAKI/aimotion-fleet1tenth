@@ -129,9 +129,9 @@ print(f"Starting position: {x},  {y},  {theta_p}")
 
 fleet1tenth=Fleet1tenth(config_file_path=None)
 
-fleet1tenth.fleet.init_cars("AI_car_01")
-fleet1tenth.fleet.launch_cars("AI_car_01")
-c1=fleet1tenth.fleet.get_car_by_ID("AI_car_01")
+fleet1tenth.fleet.init_cars("RC_car_02")
+fleet1tenth.fleet.launch_cars("RC_car_02")
+c1=fleet1tenth.fleet.get_car_by_ID("RC_car_02")
 
 path.plot_traj()
 

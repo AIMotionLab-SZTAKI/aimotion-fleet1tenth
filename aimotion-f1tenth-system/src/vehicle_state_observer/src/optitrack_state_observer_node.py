@@ -229,7 +229,11 @@ if __name__ == '__main__':
         mocap_source=rospy.get_param("~MOCAP_SOURCE")
 
         if mocap_source== "external":
-            pose_topic=parameters["MOCAP_EXTERNAL_TOPIC"]
+            # get topic adress
+            topic_raw=parameters["MOCAP_EXTERNAL_TOPIC"]
+
+            # insert id into the topic adress
+            pose_topic=topic_raw.replace("<id>", rospy.get_param("car_id"))
         else:
             pose_topic="aimotion_mocap_node/pose"
 

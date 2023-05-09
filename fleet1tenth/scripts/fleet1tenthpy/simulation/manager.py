@@ -1,6 +1,5 @@
 import rospy
 from vehicle_state_msgs.msg import VehicleStateStamped
-import atexit
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.animation import TimedAnimation
@@ -8,9 +7,7 @@ from matplotlib.lines import Line2D
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.patches import Rectangle
 import matplotlib
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QComboBox, QGroupBox, QFileDialog
-from PyQt5.QtGui import QMouseEvent,QWheelEvent
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox,QFileDialog
 import pandas as pd
 matplotlib.use("Qt5Agg")
 
@@ -46,7 +43,7 @@ class PlaybackDialog(QDialog):
         #playbacksettingsGB=QGroupBox()
         #playbacksettingsGB.setTitle("Playback settings")
         #playbacksettingsGB.setLayout(playbacksettingsLayout)
-
+        
         self.vidFIG=FigAnimation(self.car_logs)
         #self.vidLBL = VideoLabel()
         #self.vidLBL.setAlignment(Qt.AlignCenter)

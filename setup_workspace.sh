@@ -27,4 +27,8 @@ path=$(cd "$MY_PATH" && pwd)
 echo "source $path/devel/setup.bash" >> ~/.bashrc
 source $path/devel/setup.bash
 
+# for the SSH connection to the cars
+echo "export ROSLAUNCH_SSH_UNKOWN=1" >> ~/.bashrc
+
+
 echo "aimotion-fleet1tenth is built successfully"

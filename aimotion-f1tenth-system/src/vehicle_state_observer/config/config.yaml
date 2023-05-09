@@ -1,4 +1,4 @@
 # Motion Capture settings
 MARKER_OFFSET: 0 #0.2225 # [m] OptiTrack RigidBody center-point from the Vehicle's CoM    
-MOCAP_EXTERNAL_TOPIC: "/aimotion_mocap_node/rigid_bodies/AI_car_01/pose" # Specifies which topic the external mocap node publishes to. (only required if motion_tracking is set to external)
+MOCAP_EXTERNAL_TOPIC: "/aimotion_mocap_node/rigid_bodies/<id>/pose" # Specifies which topic the external mocap node publishes to. (only required if motion_tracking is set to external)
 CUTOFF: 2

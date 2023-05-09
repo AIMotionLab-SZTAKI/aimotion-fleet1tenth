@@ -1,15 +1,10 @@
 #! /usr/bin/env python3
 
-from threading import Thread
-from attr import asdict
 import numpy as np
 import rospy
 import time
-from scipy.integrate import odeint, solve_ivp
 from drive_bridge_msg.msg import InputValues
 from vehicle_state_msgs.msg import VehicleStateStamped
-import matplotlib.pyplot as plt
-from os.path import expanduser
 from math import ceil
 
 def RungeKutta4_step(t, h, y_n, model, inputs):
