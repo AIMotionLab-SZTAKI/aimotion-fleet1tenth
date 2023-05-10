@@ -4,5 +4,5 @@ AI_car_01:
 
 
 RC_car_02:
-  STEERING_GAINS: [-1, 0.5] #[1/rad] [1] used for delta-> control input conversion
-  MOTOR_LIMIT: 0.1 # The absolute limit of the motors reference input that normally ranges from -1 to 1
+  STEERING_GAINS: [-0.87441, 0.55568] #[1/rad] [1] used for delta-> control input conversion
+  MOTOR_LIMIT: 0.2 # The absolute limit of the motors reference input that normally ranges from -1 to 1
