@@ -7,7 +7,7 @@ import yaml
 import os
 
 class DriveBridge:
-    def __init__(self):
+    def __init__(self, car_id):
         rospy.init_node("drive_bridge", anonymous=True)
 
         # get ROS parameters
@@ -17,9 +17,9 @@ class DriveBridge:
             except yaml.YAMLError as e:
                 print("Cannot load YAML data!")
 
-        self.angle_offset=float(parameters["STEERING_GAINS"][1])
-        self.angle_gain=float(parameters["STEERING_GAINS"][0])
-        self.reference_limit=float(parameters["MOTOR_LIMIT"])
+        self.angle_offset=float(parameters[car_id]["STEERING_GAINS"][1])
+        self.angle_gain=float(parameters[car_id]["STEERING_GAINS"][0])
+        self.reference_limit=float(parameters[car_id]["MOTOR_LIMIT"])
 
         # Create Publishers
         self.delta_pub=rospy.Publisher("commands/servo/position", Float64, queue_size=1)
@@ -57,7 +57,8 @@ class DriveBridge:
 # launch main
 if __name__=="__main__":
     try:
-        drive_bridge=DriveBridge()
+        car_id=rospy.get_param("car_id")
+        drive_bridge=DriveBridge(car_id)
         rospy.Subscriber("control", InputValues, callback=drive_bridge.send_commands)
         rospy.on_shutdown(drive_bridge.shutdown)
         rospy.spin()
