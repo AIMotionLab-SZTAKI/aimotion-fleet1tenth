@@ -1,29 +1,47 @@
-CombinedController:
-  LATERAL_CONTROL_GAINS: # TODO: add details on the control algorithms
-    #k1: [-0.0000,0.0002,-0.0013,0.0225] # GS base
-    #k2: [-0.0089,0.0691,-0.2403,0.8267]
-    #k3: [0.0026,-0.0667,0.4328,-0.0604]
-    #k1: [-0.0006,0.0051,-0.0170,0.1215] # GS high
-        #k2: [-0.0494,0.3184,-0.7847,3.2132]
-    #k3: [0.0350,-0.3029,1.0589,-0.1582]
-    k1: [0.00266,-0.0168,0.0368,0.0357] #LPV base
-    k2: [0.0424,-0.268,0.588,0.57]
-    k3: [0.00952,-0.109,0.469,0.0322]
+AI_car_01:
+  CombinedController:
+    LATERAL_CONTROL_GAINS: # TODO: add details on the control algorithms
+      #k1: [-0.0000,0.0002,-0.0013,0.0225] # GS base
+      #k2: [-0.0089,0.0691,-0.2403,0.8267]
+      #k3: [0.0026,-0.0667,0.4328,-0.0604]
+      #k1: [-0.0006,0.0051,-0.0170,0.1215] # GS high
+      #k2: [-0.0494,0.3184,-0.7847,3.2132]
+      #k3: [0.0350,-0.3029,1.0589,-0.1582]
+      k1: [0.00266,-0.0168,0.0368,0.0357] #LPV base
+      k2: [0.0424,-0.268,0.588,0.57]
+      k3: [0.00952,-0.109,0.469,0.0322]
 
-    # reversing gains
-    k1_r: [-0.0008,0.0442, -1.2247] # GS
-    k2_r: [-0.0002,0.0191,-0.9531]
+      # reversing gains
+      k1_r: [-0.0008,0.0442, -1.2247] # GS
+      k2_r: [-0.0002,0.0191,-0.9531]
 
-  LONGITUDINAL_CONTROL_GAINS:
-    k1: [0.0001,-0.0014,0.0908]
-    k2: [-0.0025,0.0298,0.0095]
-    #k1: [0.0001,-0.0014,0.1008]
-    #k2: [-0.0025,0.0298,0.0305]
-    #k1: [0.000825,0.00305,0.0126,0.0961] # LPV
-    #k2: [0.0000835,-0.000691,0.00224,0.00293]
+    LONGITUDINAL_CONTROL_GAINS:
+      k1: [0.0001,-0.0014,0.0908]
+      k2: [-0.0025,0.0298,0.0095]
     
-    # model parameters required for the feedforward
-    m: 2.9 # [kg]
-    C_m1: 60 # [N]
-    C_m2: 3 # [Ns/m]
-    C_m3: 0.6 # [N]
+      # model parameters required for the feedforward
+      m: 2.9 # [kg]
+      C_m1: 60 # [N]
+      C_m2: 3 # [Ns/m]
+      C_m3: 0.6 # [N]
+
+RC_car_02:
+  CombinedController:
+    LATERAL_CONTROL_GAINS: # TODO: add details on the control algorithms
+      k1: [0.00122,-0.00826,0.0184,0.016] #LPV base
+      k2: [0.164,-1.11,2.48,2.16]
+      k3: [0.00608,-0.105,0.479,0.0165]
+
+      # reversing gains
+      k1_r: [-0.0008,0.0442, -1.2247] # GS
+      k2_r: [-0.0002,0.0191,-0.9531]
+
+    LONGITUDINAL_CONTROL_GAINS:
+      k1: [0.00609,-0.0301,0.0915]
+      k2: [0.0001,0.0007,0.00244]
+    
+      # model parameters required for the feedforward
+      m: 3.05 # [kg]
+      C_m1: 97.6818 # [N]
+      C_m2: 5.1644 # [Ns/m]
+      C_m3: 1.8901 # [N]

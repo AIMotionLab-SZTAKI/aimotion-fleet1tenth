@@ -84,6 +84,8 @@ if __name__=="__main__":
         # get ROS params for CombinedController
         freq=float(rospy.get_param("/AIMotionLab/FREQUENCY", 40.0))
 
+        # get car_id
+        car_id=rospy.get_param("car_id")
 
         # local parameters
         with open(os.path.dirname(os.path.dirname(__file__))+"/config/config.yaml") as f:
@@ -92,8 +94,8 @@ if __name__=="__main__":
             except yaml.YAMLError as e:
                 print("Cannot load yaml parameter file!")
 
-        lat_gains=parameters["CombinedController"]["LATERAL_CONTROL_GAINS"]
-        long_gains=parameters["CombinedController"]["LONGITUDINAL_CONTROL_GAINS"]
+        lat_gains=parameters[car_id]["CombinedController"]["LATERAL_CONTROL_GAINS"]
+        long_gains=parameters[car_id]["CombinedController"]["LONGITUDINAL_CONTROL_GAINS"]
 
         # init controller
         controller=CombinedController(FREQUENCY=freq,projection_window=3, lateral_gains=lat_gains,longitudinal_gains=long_gains, projection_step=0.01, look_ahead=0.2)
