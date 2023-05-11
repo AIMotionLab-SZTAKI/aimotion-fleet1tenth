@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # Setup script of the master PC
-
 # source ROS and include into .bashrc
 source /opt/ros/noetic/setup.bash
 echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
@@ -31,4 +30,4 @@ source $path/devel/setup.bash
 echo "export ROSLAUNCH_SSH_UNKOWN=1" >> ~/.bashrc
 
 
-echo "aimotion-fleet1tenth is built successfully"
+echo "aimotion-fleet1tenth has been built successfully"
