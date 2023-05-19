@@ -127,7 +127,7 @@ class CombinedController(BaseController):
         # invert z1 for lateral dynamics:
         e=-z1
         self.q+=e
-        self.q=_clamp(self.q,0.2)
+        self.q=_clamp(self.q,0.1)
 
         # estimate error derivative
         try:

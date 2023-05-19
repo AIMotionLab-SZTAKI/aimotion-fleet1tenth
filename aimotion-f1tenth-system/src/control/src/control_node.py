@@ -3,7 +3,7 @@
 
 # Currently developed in Python2.7
 
-from controllers import CombinedController
+from CombinedController import CombinedController
 import rospy
 import yaml
 import os
