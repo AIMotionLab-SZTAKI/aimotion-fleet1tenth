@@ -263,7 +263,8 @@ class Car:
         goal.s_end=range[1]
 
         def cb(progress):
-            print(progress)
+            pass
+            #print(progress)
 
         self.execute_trajectory_client.send_goal(goal, feedback_cb=cb) # TODO: consider adding feedback function
         print(f"{self.ID} executing the uploaded trajectory...")

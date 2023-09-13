@@ -12,6 +12,8 @@ class Path:
         self.x_points = path_points[:, 0].tolist()
         self.y_points = path_points[:, 1].tolist()
 
+        self.const_speed=const_speed
+
         if (
             path_points[0, 0] == path_points[-1, 0]
             and path_points[0, 1] == path_points[-1, 1]
@@ -41,12 +43,20 @@ class Path:
         speed_vect[-1]=0
         self.speed_tck=splrep(self.u,speed_vect)
     
-    def plot_traj(self):
+    def plot_traj(self, block=True):
         (x,y)=splev(self.u, self.tck)
         v=splev(self.u,self.speed_tck)
-        plt.plot(x,y)
-        plt.plot(self.u,v)
-        plt.show()
+        fig, (ax1, ax2)=plt.subplots(2,1)
+        ax1.plot(x,y)
+        ax1.set_xlabel(r'$x$')
+        ax1.set_xlim([min(x)-.2, max(x)+.2])
+        ax1.set_ylabel(r'$y$')
+        ax1.set_ylim([min(y)-.2, max(y)+.2])
+        
+        ax2.plot(self.u,v)
+        ax2.set_xlabel(r'$s$')
+        ax2.set_ylabel(r'$v$')
+        plt.show(block=block)
 
     def set_speed(self,const_speed):
         speed_vect=const_speed*np.ones(len(self.u))

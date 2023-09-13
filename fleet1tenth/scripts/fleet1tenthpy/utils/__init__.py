@@ -1,0 +1,1 @@
+from .examplepathgen import Path
